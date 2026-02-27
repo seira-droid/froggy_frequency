@@ -1,0 +1,8 @@
+# Folders to ignore
+.vscode/
+.DS_Store
+*.tmp
+*.log
+node_modules/
+dist/
+build/
