@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="An interactive, voice-powered frog jump game controlled by voice frequency. Hum to jump and master the lily pads!">
+    <meta name="keywords" content="Voice Game, Frog Jump, Arduino, Frequency Detection, Web Audio API">
+    <meta property="og:title" content="Froggy Frequency: Voice-Powered Jump">
+    <meta property="og:description" content="Pitch-perfect platforming. Control your frog with your voice!">
+    <title>Froggy Frequency | Minimal Contrast Training (V8.5 Lantern Festival)</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="game-container">
+        <header>
+            <h1>Froggy Contrast <span style="font-size: 0.8rem; vertical-align: middle; opacity: 0.6;">V8.5
+                    Festival</span></h1>
+            <div id="nav-controls">
+                <button id="game-nav-btn" class="nav-btn active">Game</button>
+                <button id="dashboard-nav-btn" class="nav-btn">Dashboard</button>
+            </div>
+            <div id="controls">
+                <button id="mic-btn" class="premium-btn">Enable Mic</button>
+                <button id="connect-btn" class="premium-btn">Connect Arduino</button>
+                <div id="status">
+                    <span class="status-dot"></span>
+                    <span id="status-text">System Idle</span>
+                </div>
+                <select id="age-select" class="premium-select">
+                    <option value="toddler">Toddler (High Pitch)</option>
+                    <option value="child" selected>Child (Standard)</option>
+                    <option value="adult">Adult (Deep Pitch)</option>
+                </select>
+                <select id="category-select" class="premium-select">
+                    <option value="Vowels">Train Vowels</option>
+                    <option value="Words">Train Words</option>
+                    <option value="Jetpack" selected>Jetpack Challenge</option>
+                </select>
+                <div class="setting-group">
+                    <label>Sensitivity</label>
+                    <input type="range" id="sensitivity-slider" min="1" max="50" value="2" class="premium-slider">
+                    <span id="sensitivity-val">2</span>
+                    <div class="meter-bg">
+                        <div id="volume-meter" class="meter-fill"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-item">Score: <span id="score">0</span></div>
+                <div class="stat-item">Freq: <span id="freq-val">0</span>Hz</div>
+            </div>
+        </header>
+
+        <div id="visualizer-container">
+            <canvas id="visualizerCanvas"></canvas>
+            <div id="calibration-info">Ready for Input</div>
+        </div>
+
+        <div id="prompt-container">
+            <div id="prompt-label">SPEECH TASK</div>
+            <div id="prompt-text">Make a sound to start!</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <section id="dashboard-container" style="display: none;">
+            <div class="dashboard-header">
+                <h2>Child Progress Tracker</h2>
+                <div class="search-bar">
+                    <input type="text" placeholder="Search child name..." id="child-search">
+                </div>
+            </div>
+
+            <div class="child-grid" id="child-grid">
+                <!-- Data injected via game.js -->
+            </div>
+        </section>
+
+        <div id="instruction-overlay">
+            <div class="overlay-content">
+                <h2 id="overlay-title">Lantern Festival Challenge!</h2>
+                <p id="overlay-msg">1. Hold a long "Ahhh" sound to fly!</p>
+                <p>2. Your jetpack will blast colorful bubbles.</p>
+                <p style="color: #FFD700; font-weight: bold;">(Goal: Reach the Glowing Lanterns in the sky!)</p>
+                <div class="btn-group">
+                    <button id="start-btn" class="premium-btn">Launch Jetpack!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live System Log for Troubleshooting -->
+    <div id="diagnostic-log"
+        style="position:fixed; bottom:20px; right:20px; width:280px; height:200px; background:rgba(0,0,0,0.85); font-family:monospace; font-size:11px; color:#44ff44; padding:15px; border-radius:12px; overflow-y:auto; z-index:10000; border:2px solid #555; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+        <div style="border-bottom: 1px solid #444; padding-bottom: 5px; margin-bottom: 10px; color: #fff;">-- System
+            Logs (V8.2 Active) --</div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

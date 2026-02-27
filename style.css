@@ -1,0 +1,434 @@
+:root {
+    --primary: #4CAF50;
+    --primary-dark: #388E3C;
+    --accent: #FFC107;
+    --bg: #0d1b2a;
+    --glass: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --text: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+    position: relative;
+}
+
+header {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+}
+
+h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(to right, #81c784, #4caf50);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+}
+
+#nav-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.nav-btn {
+    background: transparent;
+    color: white;
+    border: 1px solid var(--glass-border);
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.nav-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+#controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.premium-btn {
+    background: linear-gradient(to bottom, #4caf50, #388e3c);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.premium-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.premium-select {
+    background: var(--glass);
+    color: white;
+    border: 1px solid var(--glass-border);
+    padding: 8px 15px;
+    border-radius: 10px;
+    outline: none;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    background: #ff5252;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.connected {
+    background: #4caf50;
+    box-shadow: 0 0 10px #4caf50;
+}
+
+#status-text {
+    font-size: 0.9rem;
+    margin-left: 5px;
+}
+
+.setting-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--glass);
+    padding: 5px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+}
+
+.setting-group label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+
+.premium-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100px;
+    height: 4px;
+    background: var(--glass-border);
+    border-radius: 2px;
+}
+
+.premium-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 15px;
+    height: 15px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--accent);
+}
+
+#sensitivity-val {
+    font-size: 0.8rem;
+    font-weight: 700;
+    min-width: 20px;
+}
+
+.meter-bg {
+    width: 60px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+
+.meter-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #4CAF50, #FFC107);
+    transition: width 0.1s ease;
+}
+
+/* Dashboard Styles */
+#dashboard-container {
+    flex: 1;
+    padding: 40px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 80;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.search-bar input {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    padding: 10px 20px;
+    border-radius: 20px;
+    color: white;
+    width: 250px;
+    outline: none;
+}
+
+.child-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.child-card {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 25px;
+    transition: transform 0.3s, background 0.3s;
+    cursor: pointer;
+}
+
+.child-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.child-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.child-stats {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.stat-pill {
+    background: var(--glass);
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 5px;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #1b263b;
+    width: 80%;
+    max-width: 800px;
+    border-radius: 30px;
+    padding: 40px;
+    position: relative;
+    border: 1px solid var(--glass-border);
+}
+
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 25px;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+/* Game Elements */
+#visualizer-container {
+    position: absolute;
+    top: 100px;
+    right: 30px;
+    width: 200px;
+    height: 100px;
+    background: var(--glass);
+    border-radius: 15px;
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    z-index: 90;
+}
+
+#visualizerCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+#calibration-info {
+    position: absolute;
+    bottom: 5px;
+    left: 10px;
+    font-size: 0.7rem;
+    color: var(--accent);
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    flex: 1;
+}
+
+.stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-item {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+#instruction-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(13, 27, 42, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 150;
+}
+
+.overlay-content {
+    text-align: center;
+    max-width: 500px;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    padding: 50px;
+    border-radius: 40px;
+    border: 1px solid var(--glass-border);
+}
+
+.overlay-content h2 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+}
+
+.overlay-content p {
+    margin: 10px 0;
+    opacity: 0.8;
+}
+
+.btn-group {
+    margin-top: 30px;
+}
+
+#prompt-container {
+    position: absolute;
+    top: 110px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--glass);
+    padding: 20px 40px;
+    border-radius: 50px;
+    border: 1px solid var(--glass-border);
+    text-align: center;
+    z-index: 95;
+    pointer-events: none;
+}
+
+#prompt-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 5px;
+}
+
+#prompt-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.mastery-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.mastery-count {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.active-prompt {
+    animation: pulse 1s infinite ease-in-out;
+}
