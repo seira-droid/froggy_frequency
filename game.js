@@ -12,41 +12,168 @@ const vizCanvas = document.getElementById('visualizerCanvas');
 const vizCtx = vizCanvas.getContext('2d');
 const calibEl = document.getElementById('calibration-info');
 const ageSelect = document.getElementById('age-select');
+const categorySelect = document.getElementById('category-select');
 const promptTextEl = document.getElementById('prompt-text');
-const practiceModeToggle = document.getElementById('practice-mode');
-const sessionSummary = document.getElementById('session-summary');
-const masteryListEl = document.getElementById('mastery-list');
 const sensitivitySlider = document.getElementById('sensitivity-slider');
 const sensitivityValEl = document.getElementById('sensitivity-val');
 const volumeMeter = document.getElementById('volume-meter');
+const stabilityMeter = document.getElementById('stability-meter');
+const breathBar = document.getElementById('breath-bar');
+const worldNameEl = document.getElementById('world-name');
+const levelValEl = document.getElementById('level-val');
+const sysLog = document.getElementById('diagnostic-log');
 
-// Nav Elements
-const gameNavBtn = document.getElementById('game-nav-btn');
-const dashboardNavBtn = document.getElementById('dashboard-nav-btn');
-const dashboardContainer = document.getElementById('dashboard-container');
-const childGrid = document.getElementById('child-grid');
-const categorySelect = document.getElementById('category-select');
+// --- AI ADAPTIVE INTELLIGENCE ---
+class AdaptiveIntelligence {
+    constructor() {
+        this.pitchHistory = [];
+        this.loudnessHistory = [];
+        this.maxHistory = 100;
+        this.movingAvgPitch = 0;
+        this.rollingVarianceLoudness = 0;
+        this.fatigueDetected = false;
+        this.sessionStartTime = Date.now();
+        this.lastCalibrationUpdate = Date.now();
+    }
 
-let practiceMode = false;
-let sessionStats = {};
-let gameActive = false;
-let jumpCooldown = false;
-let isPrompting = false; // Prevent prompt double-skipping
-let portLocked = false; // Prevent multiple serial port attempts
+    pushData(pitch, loudness) {
+        this.pitchHistory.push(pitch);
+        this.loudnessHistory.push(loudness);
+        if (this.pitchHistory.length > this.maxHistory) {
+            this.pitchHistory.shift();
+            this.loudnessHistory.shift();
+        }
+        this.calculateMetrics();
+        this.autoAdjustThresholds();
+    }
 
-// Dummy Data
-const dummyChildren = [
-    { id: 1, name: "Alex Johnson", age: "6", sessions: 12, mastery: 85, color: "#4CAF50" },
-    { id: 2, name: "Sia Williams", age: "5", sessions: 8, mastery: 72, color: "#FFC107" },
-    { id: 3, name: "Leo Smith", age: "7", sessions: 15, mastery: 94, color: "#E91E63" },
-    { id: 4, name: "Emma Davis", age: "4", sessions: 4, mastery: 45, color: "#2196F3" }
+    calculateMetrics() {
+        if (this.pitchHistory.length < 10) return;
+
+        // Moving Average Pitch
+        const sum = this.pitchHistory.reduce((a, b) => a + b, 0);
+        this.movingAvgPitch = sum / this.pitchHistory.length;
+
+        // Rolling Variance of Loudness (Stability)
+        const avgL = this.loudnessHistory.reduce((a, b) => a + b, 0) / this.loudnessHistory.length;
+        this.rollingVarianceLoudness = this.loudnessHistory.reduce((v, l) => v + Math.pow(l - avgL, 2), 0) / this.loudnessHistory.length;
+
+        // Update Stability UI
+        const stability = Math.max(0, 100 - (this.rollingVarianceLoudness * 500));
+        stabilityMeter.style.width = stability + '%';
+        stabilityMeter.style.background = stability > 70 ? '#4caf50' : (stability > 40 ? '#FFC107' : '#ff5252');
+    }
+
+    autoAdjustThresholds() {
+        // Only adjust every 5 seconds to avoid jitter
+        if (Date.now() - this.lastCalibrationUpdate < 5000) return;
+        this.lastCalibrationUpdate = Date.now();
+
+        if (this.pitchHistory.length < 50) return;
+
+        const currentSett = ageSettings[currentAge];
+        // If the user is consistently hitting above current mega, raise the floor slightly
+        if (this.movingAvgPitch > currentSett.high) {
+            currentSett.low += 2;
+            currentSett.mega += 5;
+            console.log("AI: Adjusting thresholds UP based on performance.");
+        } else if (this.movingAvgPitch < currentSett.low + 50 && this.movingAvgPitch > 50) {
+            currentSett.low -= 5;
+            console.log("AI: Adjusting thresholds DOWN to help user.");
+        }
+
+        // Limit range
+        currentSett.low = Math.max(50, Math.min(400, currentSett.low));
+        sensitivitySlider.value = currentSett.low;
+        sensitivityValEl.innerText = Math.round(currentSett.low);
+    }
+
+    predictImprovement() {
+        if (this.pitchHistory.length < 50) return { trend: 'neutral', message: 'Collecting data...' };
+
+        // Simple linear regression to check trend
+        const n = this.pitchHistory.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        for (let i = 0; i < n; i++) {
+            sumX += i;
+            sumY += this.pitchHistory[i];
+            sumXY += i * this.pitchHistory[i];
+            sumXX += i * i;
+        }
+        const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+
+        if (slope > 0.5) return { trend: 'improving', message: 'Steady Improvement!' };
+        if (slope < -0.5) return { trend: 'fatigue', message: 'Fatigue Detected - Take a break?' };
+        return { trend: 'plateau', message: 'Consistent Mastery' };
+    }
+}
+
+const ai = new AdaptiveIntelligence();
+
+// --- NARRATIVE SYSTEM ---
+const worlds = [
+    { name: "The Foggy Pond", color: "#1b263b", unlockScore: 0 },
+    { name: "Crystal Caverns", color: "#2d1b3b", unlockScore: 50 },
+    { name: "Neon Rainforest", color: "#003b1b", unlockScore: 150 },
+    { name: "Starry Summit", color: "#16003b", unlockScore: 300 }
 ];
+let currentWorldIdx = 0;
+let playerLevel = 1;
+let levelExp = 0;
+
+// --- DATA & STATE ---
+let selectedChild = null;
+let gameActive = false;
+let isPrompting = false;
+let soundBufferFrames = 0;
+const NOISE_GATE_THRESHOLD = 2; // Standardized
+let portLocked = false;
+let profileDatabase = [];
+try {
+    const saved = localStorage.getItem('froggy_profiles');
+    profileDatabase = saved ? JSON.parse(saved) : [];
+
+    // Force default profiles if empty
+    if (profileDatabase.length === 0) {
+        profileDatabase = [
+            { id: 1, name: "Alex (Student)", age: "6", sessions: 12, mastery: 85, color: "#4CAF50", highFreq: 600, lowFreq: 220, sessionHistory: [] },
+            { id: 2, name: "Sia (Student)", age: "5", sessions: 8, mastery: 72, color: "#FFC107", highFreq: 650, lowFreq: 250, sessionHistory: [] }
+        ];
+        localStorage.setItem('froggy_profiles', JSON.stringify(profileDatabase));
+    }
+} catch (e) {
+    console.warn("Resetting corrupt profile database");
+    profileDatabase = [
+        { id: 1, name: "Alex (Student)", age: "6", sessions: 12, mastery: 85, color: "#4CAF50", highFreq: 600, lowFreq: 220, sessionHistory: [] }
+    ];
+}
+
+const saveProfiles = () => {
+    try {
+        localStorage.setItem('froggy_profiles', JSON.stringify(profileDatabase));
+    } catch (e) { console.error("Save failed", e); }
+};
+
+// Navigation Elements (Updated)
+const gameNavBtn = document.getElementById('game-nav-btn');
+const trainerBtn = document.getElementById('trainer-access-btn');
+const trainerPortal = document.getElementById('trainer-portal');
+const exitTrainerBtn = document.getElementById('exit-trainer-btn');
+const profileModal = document.getElementById('profile-modal');
+const profileGrid = document.getElementById('profile-grid');
+const addProfileBtn = document.getElementById('add-profile-btn');
+const detailModal = document.getElementById('student-detail-modal');
+const detailContent = document.getElementById('student-detail-content');
+const closeDetailBtn = document.getElementById('close-detail-btn');
+const currentViewingChildEl = document.getElementById('current-viewing-child');
+const childGrid = document.getElementById('child-grid');
+
 
 const ageSettings = {
     arduino: { low: 4, med: 12, high: 25, mega: 40 },
-    child: { low: 150, med: 300, high: 450, mega: 600 },
+    child: { low: 180, med: 320, high: 480, mega: 650 }, // Calibrated for higher pitch children's voices
     adult: { low: 80, med: 160, high: 240, mega: 320 },
-    toddler: { low: 200, med: 400, high: 600, mega: 800 }
+    toddler: { low: 220, med: 400, high: 550, mega: 750 }
 };
 const baseAgeSettings = JSON.parse(JSON.stringify(ageSettings));
 
@@ -93,6 +220,17 @@ let bubbles = [];
 let lanternGoal = { x: 0, y: -2000, active: false, size: 40 };
 let ambientLanterns = [];
 let sustainedTime = 0;
+let fireflies = Array.from({ length: 30 }, () => ({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    size: Math.random() * 2 + 1,
+    vx: (Math.random() - 0.5) * 1,
+    vy: (Math.random() - 0.5) * 1,
+    phase: Math.random() * Math.PI * 2
+}));
+let frogTrail = [];
+let currentFreq = 0; // Global track for aura scaling
+let freqStabilityBuffer = []; // Tracking consistent phonation
 
 // Hybrid Audio Logic (Mic + Serial)
 let audioCtx;
@@ -122,6 +260,12 @@ async function initMic() {
         statusText.innerText = 'Mic Active';
         micBtn.style.display = 'none';
         connectBtn.style.display = 'none';
+
+        // Force switch away from Arduino settings if currently selected
+        if (currentAge === 'arduino') {
+            currentAge = 'child';
+            ageSelect.value = 'child';
+        }
 
         // Sync slider to current age settings
         sensitivitySlider.value = ageSettings[currentAge].low;
@@ -177,12 +321,50 @@ function detectPitch() {
     if (!isMicEnabled) return;
 
     analyser.getFloatTimeDomainData(pitchDataArray);
+
+    // Get RMS (Loudness) for Volume Meter and AI
+    const rms = Math.sqrt(pitchDataArray.reduce((acc, val) => acc + val * val, 0) / pitchDataArray.length);
+
+    // Update Volume Meter (Actual loudness now, not frequency)
+    const volPercent = Math.min(100, rms * 500);
+    volumeMeter.style.width = volPercent + '%';
+    volumeMeter.style.background = rms > 0.01 ? '#00ff88' : '#555';
+
     const freq = autoCorrelate(pitchDataArray, audioCtx.sampleRate);
 
-    if (freq !== -1 && freq > 50) {
-        freqEl.innerText = Math.round(freq);
-        handleJump(freq);
-        updateVisualizer(freq);
+    // VOICE SPECIFICITY FIX: Only respond if frequency is within human vocal range (40Hz - 1200Hz)
+    // AND check for Pitch Stability (Noise is erratic, Vowels are steady)
+    if (freq !== -1 && freq > 40 && freq < 1200) {
+        freqStabilityBuffer.push(freq);
+        if (freqStabilityBuffer.length > 4) freqStabilityBuffer.shift();
+
+        const maxDiff = Math.max(...freqStabilityBuffer) - Math.min(...freqStabilityBuffer);
+        const isSteady = freqStabilityBuffer.length >= 3 && maxDiff < (freq * 0.25); // 25% jitter allowed
+
+        if (isSteady) {
+            currentFreq = freq;
+            freqEl.innerText = Math.round(freq);
+            statusText.innerText = 'Voice Detected';
+            statusDot.classList.add('pulse');
+
+            ai.pushData(freq, rms);
+            handleJump(freq);
+            updateVisualizer(freq);
+
+            const breathPercent = Math.min(100, rms * 400);
+            breathBar.style.width = breathPercent + '%';
+        } else {
+            statusText.innerText = 'Analyzing Voice...';
+        }
+    } else {
+        // REMOVED 'Basic Sound Detected' fallback to prevent non-vocal jumps
+        currentFreq = 0;
+        breathBar.style.width = '0%';
+        if (gameActive) {
+            statusText.innerText = 'Awaiting Voice...';
+            statusDot.classList.remove('pulse');
+        }
+        handleJump(0);
     }
 
     requestAnimationFrame(detectPitch);
@@ -266,37 +448,31 @@ function autoCorrelate(buf, sampleRate) {
         rms += val * val;
     }
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.05) return -1; // Increased volume floor from 0.01 to 0.05
+    if (rms < 0.015) return -1; // Increased noise floor (was 0.002) to filter background hum
 
-    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
-    for (let i = 0; i < SIZE / 2; i++) {
-        if (Math.abs(buf[i]) < thres) { r1 = i; break; }
-    }
-    for (let i = 1; i < SIZE / 2; i++) {
-        if (Math.abs(buf[SIZE - i]) < thres) { r2 = SIZE - i; break; }
-    }
-
-    buf = buf.slice(r1, r2);
-    SIZE = buf.length;
-
-    const c = new Array(SIZE).fill(0);
-    for (let i = 0; i < SIZE; i++) {
-        for (let j = 0; j < SIZE - i; j++) {
-            c[i] = c[i] + buf[j] * buf[j + i];
+    // Standard Autocorrelation with simpler peak detection
+    let correlations = new Float32Array(SIZE);
+    for (let offset = 0; offset < SIZE; offset++) {
+        for (let i = 0; i < SIZE - offset; i++) {
+            correlations[offset] += buf[i] * buf[i + offset];
         }
     }
 
+    // Skip initial peak
     let d = 0;
-    while (c[d] > c[d + 1]) d++;
+    while (correlations[d] > correlations[d + 1] && d < SIZE / 2) d++;
+
+    // Find next peak
     let maxval = -1, maxpos = -1;
-    for (let i = d; i < SIZE; i++) {
-        if (c[i] > maxval) {
-            maxval = c[i];
+    for (let i = d; i < SIZE / 2; i++) {
+        if (correlations[i] > maxval) {
+            maxval = correlations[i];
             maxpos = i;
         }
     }
-    let T0 = maxpos;
-    return sampleRate / T0;
+
+    if (maxpos !== -1) return sampleRate / maxpos;
+    return -1;
 }
 
 function handleJump(freq) {
@@ -304,81 +480,127 @@ function handleJump(freq) {
 
     // Only allow jump if not already jumping AND either on a platform or near-zero velocity
     if (!gameActive) {
-        if (log && freq > 2) {
-            const entry = document.createElement('div');
-            entry.innerText = `[LOG] Jump Blocked: Click 'Start Game' First!`;
-            entry.style.color = 'orange';
-            log.prepend(entry);
-        }
+        soundBufferFrames = 0;
         return;
     }
 
+    if (freq > 20) {
+        soundBufferFrames++;
+    } else {
+        soundBufferFrames = 0;
+    }
+
+    if (soundBufferFrames < 3) return; // Robust filter: Requires 3 frames (~50ms) of sustained voice
+
+    const targetCat = prompts[currentPromptIdx].target;
+    // Skip target check in Jetpack mode as it's continuous contrast
     if (currentSet === 'Jetpack') {
         handleJetpack(freq);
         return;
     }
 
-    if (frog.isJumping || jumpCooldown || Math.abs(frog.vy) > 1.5) {
-        if (log && freq > 2 && Math.abs(frog.vy) > 1.5) {
+    const settings = ageSettings[currentAge];
+    const ranges = {
+        'Small': [settings.low, settings.med],
+        'Medium': [settings.med, settings.high],
+        'Long': [settings.high, settings.mega],
+        'Mega': [settings.mega, Infinity]
+    };
+
+    const targetRange = ranges[targetCat];
+    if (!targetRange) {
+        executeJump(freq, true); // Fallback for undefined targets
+        return;
+    }
+
+    const isCorrect = freq >= targetRange[0] && (targetRange[1] === Infinity || freq < targetRange[1]);
+
+    if (isCorrect) {
+        executeJump(freq, true);
+    } else if (freq > settings.low) {
+        // Wrong sound detected (above noise floor but outside target range)
+        executeJump(freq, false);
+    }
+
+    soundBufferFrames = 0; // Reset after attempt
+}
+
+function executeJump(freq, isCorrect) {
+    if (frog.isJumping) return;
+
+    const settings = ageSettings[currentAge];
+
+    if (!isCorrect) {
+        // --- WRONG SOUND RESET ---
+        statusText.innerText = "❌ Incorrect Sound!";
+        statusText.style.color = "#ff5252";
+
+        // Visual "Fail" effect
+        spawnParticles(frog.x + 30, frog.y + 30, '#ff5252');
+        frog.vx = 0;
+        frog.vy = 5; // Small stumble fall
+
+        // Find last visited platform to reset to
+        const lastPlatform = platforms.findLast(p => p.visited);
+        if (lastPlatform) {
+            setTimeout(() => {
+                frog.x = lastPlatform.x + (lastPlatform.width / 2) - 30;
+                frog.y = lastPlatform.y - frog.height;
+                frog.vy = 0;
+            }, 300);
+        }
+
+        if (sysLog) {
             const entry = document.createElement('div');
-            entry.innerText = `[LOG] Jump Blocked: Frog is mid-air!`;
-            log.prepend(entry);
+            entry.innerText = `[WRONG] Freq: ${Math.round(freq)}Hz | Expected: ${prompts[currentPromptIdx].target}`;
+            entry.style.color = '#ff5252';
+            sysLog.prepend(entry);
         }
         return;
     }
 
-    executeJump(freq);
-}
-
-function executeJump(freq) {
-    if (frog.isJumping) return;
-
-    const settings = ageSettings[currentAge];
-    if (freq < settings.low) return;
-
-    // --- LINEAR JUMP ENGINE ---
+    // --- LINEAR PROPORTIONAL JUMP ENGINE ---
     const minF = settings.low;
-    const maxF = settings.mega * 1.4;
+    const maxF = settings.mega * 1.5;
     let power = (freq - minF) / (maxF - minF);
-    power = Math.max(0, Math.min(1.2, power)); // Allow a little over-power
+    power = Math.max(0.1, Math.min(1.3, power)); // Minimum jump power 0.1
+
+    // Update Power UI
+    document.getElementById('power-val').innerText = Math.round(power * 100) + '%';
 
     // Calculate precise physics based on power
-    frog.vy = -13 - (power * 12); // Range: -13 to -25
-    frog.vx = 11 + (power * 16);  // Range: 11 to 27
+    frog.vy = -14 - (power * 14); // Dynamic Height
+    frog.vx = 12 + (power * 20);  // Dynamic Distance
 
-    // Determine Jump Type for Training Feedback
+    // Determine Jump Type
     let jumpType = "Small";
     if (power > 0.3) jumpType = "Medium";
     if (power > 0.6) jumpType = "Long";
     if (power > 0.9) jumpType = "Mega";
 
     // DIAGNOSTIC LOG
-    const log = document.getElementById('diagnostic-log');
-    if (log) {
+    if (sysLog) {
         const entry = document.createElement('div');
-        entry.innerText = `[JUMP] Power: ${Math.round(power * 100)}% | Type: ${jumpType}`;
-        entry.style.color = '#fff';
-        entry.style.fontWeight = 'bold';
-        log.prepend(entry);
+        entry.innerText = `[SUCCESS] Freq: ${Math.round(freq)}Hz | ${jumpType} Jump!`;
+        entry.style.color = '#4CAF50';
+        sysLog.prepend(entry);
     }
 
     frog.isJumping = true;
     frog.jumpType = jumpType;
     playJumpSound();
 
-    if (jumpType === prompts[currentPromptIdx].target && !isPrompting) {
-        isPrompting = true;
-        promptTextEl.innerText = "Perfect Match!";
-        promptTextEl.classList.add('active-prompt');
-        sessionStats[jumpType] = (sessionStats[jumpType] || 0) + 1;
+    // Trigger perfect match feedback
+    isPrompting = true;
+    promptTextEl.innerText = "Perfect Match!";
+    promptTextEl.classList.add('active-prompt');
 
-        setTimeout(() => {
-            promptTextEl.classList.remove('active-prompt');
-            currentPromptIdx = (currentPromptIdx + 1) % prompts.length;
-            isPrompting = false;
-            updatePrompt();
-        }, 1500);
-    }
+    setTimeout(() => {
+        promptTextEl.classList.remove('active-prompt');
+        currentPromptIdx = (currentPromptIdx + 1) % prompts.length;
+        isPrompting = false;
+        updatePrompt();
+    }, 1500);
 }
 
 function handleJetpack(freq) {
@@ -601,6 +823,25 @@ function update() {
         al.x += al.driftX + Math.sin(Date.now() / 1000) * 0.1;
     });
 
+    // Update Fireflies
+    fireflies.forEach(f => {
+        f.phase += 0.02;
+        f.x += f.vx + Math.sin(f.phase) * 0.5;
+        f.y += f.vy + Math.cos(f.phase) * 0.5;
+        if (f.x < 0) f.x = canvas.width;
+        if (f.x > canvas.width) f.x = 0;
+        if (f.y < 0) f.y = canvas.height;
+        if (f.y > canvas.height) f.y = 0;
+    });
+
+    // Update Frog Trail
+    if (frog.isJumping || jetpackActive) {
+        frogTrail.unshift({ x: frog.x + 30, y: frog.y + 30, alpha: 0.5, hue: (currentFreq % 360) });
+    }
+    if (frogTrail.length > 20) frogTrail.pop();
+    frogTrail.forEach(t => t.alpha -= 0.02);
+    frogTrail = frogTrail.filter(t => t.alpha > 0);
+
     // Collision (Refined)
     platforms.forEach(p => {
         const frogBottom = frog.y + frog.height;
@@ -650,16 +891,69 @@ function update() {
         }
     }
 
-    if (frog.y > canvas.height) resetGame();
+    // Check for level up & World progression
+    if (score > levelExp + (playerLevel * 20)) {
+        levelExp = score;
+        playerLevel++;
+        levelValEl.innerText = playerLevel;
+        spawnParticles(frog.x, frog.y, '#FFD700');
+        playLevelUpSound();
+    }
+
+    if (currentWorldIdx < worlds.length - 1 && score >= worlds[currentWorldIdx + 1].unlockScore) {
+        currentWorldIdx++;
+        worldNameEl.innerText = worlds[currentWorldIdx].name;
+        document.getElementById('game-container').style.background = `radial-gradient(circle at center, ${worlds[currentWorldIdx].color} 0%, #050a0f 100%)`;
+        promptTextEl.innerText = `Welcome to ${worlds[currentWorldIdx].name}!`;
+    }
+
+    if (frog.y > canvas.height + 500) resetGame();
+
+    // PERIODIC DIAGNOSTIC
+    if (Date.now() % 1000 < 20 && sysLog) {
+        const entry = document.createElement('div');
+        entry.innerText = `[ENGINE] Pos: ${Math.round(frog.x)},${Math.round(frog.y)} | VY: ${frog.vy.toFixed(1)}`;
+        entry.style.fontSize = '9px';
+        entry.style.opacity = '0.5';
+        sysLog.prepend(entry);
+    }
+}
+
+function playLevelUpSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const fx = frog.x + 30;
+    const fy = frog.y + 30;
+    const auraHue = currentFreq > 0 ? (currentFreq % 360) : 120;
 
-    // Parallax Stars
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    stars.forEach(s => {
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+    // Fireflies
+    fireflies.forEach(f => {
+        const glow = Math.abs(Math.sin(f.phase)) * 2;
+        ctx.fillStyle = `rgba(180, 255, 100, ${0.3 + glow * 0.3})`;
+        ctx.shadowBlur = 5 + glow * 5;
+        ctx.shadowColor = '#b4ff64';
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+    });
+
+    // Frog Trail
+    frogTrail.forEach(t => {
+        ctx.fillStyle = `hsla(${t.hue}, 80%, 60%, ${t.alpha})`;
+        ctx.beginPath(); ctx.arc(t.x, t.y, 15 * t.alpha, 0, Math.PI * 2); ctx.fill();
     });
 
     // Background Pond (Gradient)
@@ -692,8 +986,6 @@ function draw() {
         ctx.strokeStyle = 'rgba(255,255,255,0.4)';
         ctx.stroke();
     });
-    ctx.globalAlpha = 1.0;
-
     ctx.globalAlpha = 1.0;
 
     // Ambient Sky Lanterns
@@ -747,9 +1039,63 @@ function draw() {
         ctx.fillStyle = '#FFD54F'; ctx.beginPath(); ctx.arc(cx, p.y - 5, 6, 0, Math.PI * 2); ctx.fill();
     });
 
+    // Vowel Contrast Rings & Zones
+    if (currentFreq > 0) {
+        ctx.save();
+        ctx.translate(fx, fy);
+
+        // Stability Rings
+        const stability = 100 - (ai.rollingVarianceLoudness * 500);
+        const ringCount = 3 + Math.floor(stability / 20);
+        for (let i = 0; i < ringCount; i++) {
+            ctx.beginPath();
+            const radius = 80 + (i * 15) + Math.sin(Date.now() / 200 + i) * 5;
+            ctx.strokeStyle = `hsla(${(currentFreq % 360)}, 100%, 70%, ${0.5 / (i + 1)})`;
+            ctx.lineWidth = 2;
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Vowel Target Wedges (UI)
+        const vowelZones = [
+            { name: 'EE', freq: 600, color: '#00d4ff' },
+            { name: 'AH', freq: 300, color: '#ffb300' },
+            { name: 'OO', freq: 150, color: '#ff5252' }
+        ];
+
+        vowelZones.forEach((zone, idx) => {
+            const isActive = Math.abs(currentFreq - zone.freq) < 50;
+            ctx.fillStyle = isActive ? zone.color : 'rgba(255,255,255,0.1)';
+            ctx.font = 'bold 10px Outfit';
+            ctx.textAlign = 'center';
+            const angle = (idx * Math.PI * 2) / 3 - Math.PI / 2;
+            const tx = Math.cos(angle) * 150;
+            const ty = Math.sin(angle) * 150;
+            ctx.fillText(zone.name, tx, ty);
+            if (isActive) {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = zone.color;
+                ctx.beginPath();
+                ctx.arc(tx, ty - 5, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        });
+
+        ctx.restore();
+    }
+
     // Detailed Frog
-    const fx = frog.x + 30; const fy = frog.y + 30;
     ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.ellipse(fx, fy + 5, 25, 20, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Glowing Emotional Center (reacts to voice)
+    const heartSize = 5 + (currentFreq > 0 ? currentFreq / 50 : 0);
+    ctx.fillStyle = `hsla(${auraHue}, 100%, 80%, 0.8)`;
+    ctx.shadowBlur = heartSize * 2;
+    ctx.shadowColor = `hsla(${auraHue}, 100%, 60%, 1)`;
+    ctx.beginPath(); ctx.arc(fx, fy + 5, heartSize, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
     ctx.fillStyle = '#4CAF50'; ctx.beginPath(); ctx.arc(fx - 12, fy - 10, 10, 0, Math.PI * 2); ctx.arc(fx + 12, fy - 10, 10, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(fx - 12, fy - 12, 6, 0, Math.PI * 2); ctx.arc(fx + 12, fy - 12, 6, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(fx - 12, fy - 13, 3, 0, Math.PI * 2); ctx.arc(fx + 12, fy - 13, 3, 0, Math.PI * 2); ctx.fill();
@@ -779,7 +1125,7 @@ function updateVisualizer(freq) {
     vizCtx.lineTo(vizCanvas.width, vizCanvas.height / 2);
     vizCtx.stroke();
 
-    const x = (freq / (isSerialEnabled ? 100 : 1000)) * vizCanvas.width;
+    const x = (freq / 1000) * vizCanvas.width;
     vizCtx.beginPath();
     vizCtx.strokeStyle = '#FFC107';
     vizCtx.lineWidth = 3;
@@ -787,11 +1133,10 @@ function updateVisualizer(freq) {
     vizCtx.lineTo(x, vizCanvas.height);
     vizCtx.stroke();
     vizCtx.lineWidth = 1;
-    calibEl.innerText = isSerialEnabled ? 'Hardware Active' : 'Mic Active';
+    calibEl.innerText = 'Mic Active';
 
     // Update Volume Meter
-    const max = isSerialEnabled ? 100 : 1000;
-    const percent = Math.min((freq / max) * 100, 100);
+    const percent = Math.min((freq / 1000) * 100, 100);
     volumeMeter.style.width = percent + '%';
     if (freq > ageSettings[currentAge].low) {
         volumeMeter.style.background = '#FF5722'; // Flash red when jumping
@@ -806,42 +1151,156 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Dashboard
-const childSearchInput = document.getElementById('child-search');
-function renderDashboard(filter = "") {
-    childGrid.innerHTML = '';
-    dummyChildren.filter(c => c.name.toLowerCase().includes(filter.toLowerCase())).forEach(child => {
+// --- JUMPING LOGIC (UPDATE SCORE IN SELECTED CHILD) ---
+function recordSessionStats() {
+    if (!selectedChild) return;
+
+    // Find the child in the main database to ensure we update the reference that gets saved
+    const childIndex = profileDatabase.findIndex(c => c.id === selectedChild.id);
+    if (childIndex === -1) return;
+
+    const child = profileDatabase[childIndex];
+
+    const session = {
+        date: new Date().toLocaleDateString(),
+        score: score,
+        maxFreq: freqEl.innerText,
+        mode: currentSet
+    };
+
+    if (!child.sessionHistory) child.sessionHistory = [];
+    child.sessionHistory.push(session);
+    child.sessions = (child.sessions || 0) + 1;
+    child.mastery = Math.min(99, (child.mastery || 0) + 1);
+
+    saveProfiles();
+}
+
+// --- TRAINER PORTAL LOGIC ---
+
+function renderProfiles() {
+    console.log("Rendering profiles, count:", profileDatabase.length);
+    profileGrid.innerHTML = '';
+
+    if (profileDatabase.length === 0) {
+        profileGrid.innerHTML = '<div style="color:white; padding: 20px;">No profiles found. Please click the button below to add your first student!</div>';
+        return;
+    }
+
+    profileDatabase.forEach(child => {
         const card = document.createElement('div');
         card.className = 'child-card';
-        card.innerHTML = `<div class="child-name" style="color: ${child.color}">${child.name}</div><div class="stat-pill">Age: ${child.age}</div><div class="child-stats"><span class="stat-pill">Sessions: ${child.sessions}</span><span class="stat-pill">Mastery: ${child.mastery}%</span></div><div class="progress-bar-container"><div class="progress-bar" style="width: ${child.mastery}%"></div></div>`;
-        childGrid.appendChild(card);
+        card.style.borderLeft = `5px solid ${child.color}`; // Extra visual flair
+        card.innerHTML = `
+            <div class="child-name" style="color: ${child.color}">${child.name}</div>
+            <div class="stat-pill" style="opacity: 0.6">Student ID: #${child.id.toString().slice(-4)}</div>
+            <div style="margin-top: 10px; font-size: 0.8rem; opacity: 0.8">Click to start adventure →</div>
+        `;
+        card.onclick = (e) => {
+            e.stopPropagation();
+            selectChild(child);
+        };
+        profileGrid.appendChild(card);
     });
 }
 
-childSearchInput.addEventListener('input', (e) => renderDashboard(e.target.value));
+function selectChild(child) {
+    selectedChild = child;
+    console.log("Child selected:", child.name);
 
-gameNavBtn.addEventListener('click', () => {
-    gameNavBtn.classList.add('active'); dashboardNavBtn.classList.remove('active');
-    dashboardContainer.style.display = 'none'; canvas.style.display = 'block';
-});
+    profileModal.style.display = 'none';
+    overlay.style.display = 'flex';
+    currentViewingChildEl.innerText = child.name;
 
-dashboardNavBtn.addEventListener('click', () => {
-    dashboardNavBtn.classList.add('active'); gameNavBtn.classList.remove('active');
-    dashboardContainer.style.display = 'block'; canvas.style.display = 'none'; renderDashboard();
-});
+    // Apply special calibration if it exists
+    if (child.lowFreq) {
+        if (!ageSettings[currentAge]) currentAge = 'child';
+        const ratio = child.lowFreq / baseAgeSettings[currentAge].low;
+        ageSettings[currentAge].low = child.lowFreq;
+        ageSettings[currentAge].med = baseAgeSettings[currentAge].med * ratio;
+        ageSettings[currentAge].high = baseAgeSettings[currentAge].high * ratio;
+        ageSettings[currentAge].mega = baseAgeSettings[currentAge].mega * ratio;
 
+        sensitivitySlider.value = child.lowFreq;
+        sensitivityValEl.innerText = child.lowFreq;
+    }
+}
+
+addProfileBtn.onclick = () => {
+    const name = window.prompt("Enter Student Name:") || `Student ${profileDatabase.length + 1}`;
+    const newChild = {
+        id: Date.now(),
+        name: name,
+        age: "Child",
+        sessions: 0,
+        mastery: 0,
+        color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+        highFreq: 600,
+        lowFreq: 150,
+        sessionHistory: []
+    };
+    profileDatabase.push(newChild);
+    saveProfiles();
+    renderProfiles();
+    setTimeout(() => { if (confirm(`Profile "${name}" created. Start now?`)) selectChild(newChild); }, 100);
+};
+
+// Update Game Reset to track sessions
+const originalReset = resetGame;
+resetGame = function () {
+    if (gameActive && score > 0) recordSessionStats();
+    originalReset();
+}
+
+// Initialization
 micBtn.addEventListener('click', initMic);
 connectBtn.addEventListener('click', initSerial);
-startBtn.addEventListener('click', () => {
-    gameActive = true; overlay.style.display = 'none'; resetGame(); updatePrompt();
+startBtn.addEventListener('click', async () => {
+    if (audioCtx && audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+    }
+    gameActive = true;
+    overlay.style.display = 'none';
+    statusDot.className = 'status-dot connected';
+    statusText.innerText = 'Awaiting Voice...';
+
+    // Show diagnostic log for mic users
+    document.getElementById('diagnostic-log').style.display = 'block';
+
+    resetGame();
+    updatePrompt();
+    if (!audioCtx) initMic();
 });
 
-window.addEventListener('resize', () => {
-    canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+// DIAGNOSTIC FORCE JUMP
+document.getElementById('force-jump-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (gameActive) {
+        executeJump(350); // Mid-range force jump
+    }
 });
 
-canvas.width = canvas.offsetWidth;
-canvas.height = canvas.offsetHeight;
-resetGame(); // Initialize positions so frog doesn't start at y=0
+// DEBUG MANUAL JUMP
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && gameActive) {
+        e.preventDefault();
+        executeJump(300); // Simulate mid-range jump
+    }
+});
+
+const resizeCanvas = () => {
+    // Ensure the container fills available space and canvas follows
+    const container = document.getElementById('game-container');
+    const headerHeight = document.querySelector('header').offsetHeight;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight - headerHeight;
+
+    // Reposition frog if it goes out of bounds on resize
+    if (frog.y > canvas.height) resetGame();
+};
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+renderProfiles();
 animate();
-renderDashboard();

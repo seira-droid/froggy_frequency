@@ -1,21 +1,23 @@
-# Froggy Frequency: Sound-Powered Jetpack Edition (V8.3)
+# Froggy Frequency: AI Adaptive Edition (V9.0)
 
-Welcome to the latest version of Froggy Frequency! This update introduces the **Jetpack Challenge**, a new gameplay mode focused on sustained speech practice.
+Welcome to the most advanced version of Froggy Frequency! This update transforms the app from a tool into an intelligent therapy companion.
 
-## New Features
-- **Jetpack Mode:** Toggle "Jetpack Challenge" from the category menu to switch to vertical ascent gameplay.
-- **Continuous Lift Physics:** The frog now stays in the air as long as sound is detected. Longer sounds provide higher lift.
-- **Rainbow Bubble Particles:** Visual feedback that changes color based on the duration of the sustained sound.
-- **Star-Fly Objective:** A high-altitude goal that encourages children to maintain their voice for longer periods.
+## New AI Features (V9.0)
+- **Adaptive Threshold Engine:** The game now "learns" your vocal range in real-time. It automatically adjusts sensitivity and target frequencies to keep you in the "flow state"—challenging but achievable.
+- **Vocal Stability Analysis:** A new rolling variance engine monitors the consistency of your voice, helping students master steady phonation.
+- **Predictive Progress:** The system analyzes session trends to detect improvement, plateaus, or fatigue.
 
-## File Changes
-- `index.html`: Added Jetpack mode to the selection UI.
-- `game.js`: Implemented the Jetpack engine, particle systems, and goal collision.
-- `arduino_code/froggy_frequency.ino`: Updated with "Jetpack Pulse" LED feedback for hardware synchronization.
-- `backups/`: Contains pre-jetpack versions of the code for stability.
+## Psychological Gamification
+- **Narrative Worlds:** Journey through the *Foggy Pond*, *Crystal Caverns*, *Neon Rainforest*, and *Starry Summit*.
+- **Leveling System:** Earn XP with every perfect sound to level up your frog.
+- **Enhanced Biofeedback:** 
+  - **Stability Rings:** Visual ripples that grow stronger with consistent vocal output.
+  - **Vowel Zones:** Color-coded targets for "EE", "AH", and "OO" practice.
+  - **Breath Bar:** Real-time visual for respiration and vocal power.
 
-## How to use Jetpack Mode
-1. Start the game.
-2. Select **Jetpack Challenge** from the dropdown.
-3. Use a sustained "Ahhh" or "Moo" sound to lift the frog.
-4. Reach the Star-Fly at the top to win!
+## How to use AI Mode
+1. Ensure your Microphone is enabled.
+2. Select any mode (Vowels, Words, or Jetpack).
+3. Watch the **AI Adaptive Engine** calibrate as you play.
+4. Reach higher scores to unlock new worlds!
+5. Monitor your **Stability** and **Breath** in the new sidebar widgets.

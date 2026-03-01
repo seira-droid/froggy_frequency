@@ -17,11 +17,11 @@
 <body>
     <div id="game-container">
         <header>
-            <h1>Froggy Contrast <span style="font-size: 0.8rem; vertical-align: middle; opacity: 0.6;">V8.5
-                    Festival</span></h1>
+            <h1>Froggy Frequency <span class="version-tag">Quantum Edition</span></h1>
             <div id="nav-controls">
                 <button id="game-nav-btn" class="nav-btn active">Game</button>
-                <button id="dashboard-nav-btn" class="nav-btn">Dashboard</button>
+                <!-- Hidden button for trainer access -->
+                <button id="trainer-access-btn" class="nav-btn" style="opacity: 0.1; cursor: default;">.</button>
             </div>
             <div id="controls">
                 <button id="mic-btn" class="premium-btn">Enable Mic</button>
@@ -48,10 +48,32 @@
                         <div id="volume-meter" class="meter-fill"></div>
                     </div>
                 </div>
+                <div class="vocal-specs">
+                    <div class="spec-label">POWER</div>
+                    <div id="power-val" class="spec-val">0%</div>
+                    <button id="force-jump-btn" class="premium-btn secondary"
+                        style="padding: 5px 10px; font-size: 0.6rem; margin-top: 5px;">Diag: Force Jump</button>
+                </div>
             </div>
             <div class="stats">
+                <div class="stat-item">World: <span id="world-name">The Foggy Pond</span></div>
+                <div class="stat-item">Level: <span id="level-val">1</span></div>
                 <div class="stat-item">Score: <span id="score">0</span></div>
                 <div class="stat-item">Freq: <span id="freq-val">0</span>Hz</div>
+            </div>
+            <div id="biofeedback-sidebar">
+                <div class="bio-widget">
+                    <label>Stability</label>
+                    <div class="meter-bg mini">
+                        <div id="stability-meter" class="meter-fill"></div>
+                    </div>
+                </div>
+                <div class="bio-widget">
+                    <label>Breath</label>
+                    <div class="meter-bg mini">
+                        <div id="breath-bar" class="meter-fill"></div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -67,11 +89,33 @@
 
         <canvas id="gameCanvas"></canvas>
 
-        <section id="dashboard-container" style="display: none;">
+        <!-- Profile Selector Modal (Trainer Entry Point) -->
+        <div id="profile-modal" class="modal">
+            <div class="modal-content profile-selection">
+                <header class="profile-header">
+                    <h2>Who's Playing Today?</h2>
+                    <p>Select a profile to start your adventure!</p>
+                </header>
+                <div id="profile-grid" class="child-grid">
+                    <!-- Profiles injected here -->
+                </div>
+                <div class="trainer-actions">
+                    <button id="add-profile-btn" class="premium-btn secondary">+ Add New Student</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trainer Portal (Hidden from Children) -->
+        <section id="trainer-portal" style="display: none;">
             <div class="dashboard-header">
-                <h2>Child Progress Tracker</h2>
-                <div class="search-bar">
-                    <input type="text" placeholder="Search child name..." id="child-search">
+                <div>
+                    <h2>Trainer Insight Portal</h2>
+                    <p id="trainer-subtitle">Viewing progress for: <span id="current-viewing-child">All Students</span>
+                    </p>
+                </div>
+                <div class="trainer-header-actions">
+                    <input type="text" placeholder="Search student..." id="child-search" class="premium-input">
+                    <button id="exit-trainer-btn" class="premium-btn">Back to Game</button>
                 </div>
             </div>
 
@@ -80,7 +124,7 @@
             </div>
         </section>
 
-        <div id="instruction-overlay">
+        <div id="instruction-overlay" style="display: none;">
             <div class="overlay-content">
                 <h2 id="overlay-title">Lantern Festival Challenge!</h2>
                 <p id="overlay-msg">1. Hold a long "Ahhh" sound to fly!</p>
@@ -93,9 +137,19 @@
         </div>
     </div>
 
+    <!-- Student Detail View Modal (Trainer only) -->
+    <div id="student-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content detail-view">
+            <span class="close-btn" id="close-detail-btn">&times;</span>
+            <div id="student-detail-content">
+                <!-- Detailed stats injected here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Live System Log for Troubleshooting -->
     <div id="diagnostic-log"
-        style="position:fixed; bottom:20px; right:20px; width:280px; height:200px; background:rgba(0,0,0,0.85); font-family:monospace; font-size:11px; color:#44ff44; padding:15px; border-radius:12px; overflow-y:auto; z-index:10000; border:2px solid #555; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+        style="position:fixed; bottom:20px; right:20px; width:280px; height:200px; background:rgba(0,0,0,0.85); font-family:monospace; font-size:11px; color:#44ff44; padding:15px; border-radius:12px; overflow-y:auto; z-index:10000; border:2px solid #555; box-shadow: 0 0 20px rgba(0,0,0,0.5); display: none;">
         <div style="border-bottom: 1px solid #444; padding-bottom: 5px; margin-bottom: 10px; color: #fff;">-- System
             Logs (V8.2 Active) --</div>
     </div>
