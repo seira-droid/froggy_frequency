@@ -231,6 +231,7 @@ let fireflies = Array.from({ length: 30 }, () => ({
 let frogTrail = [];
 let currentFreq = 0; // Global track for aura scaling
 let freqStabilityBuffer = []; // Tracking consistent phonation
+let sessionStats = { Small: 0, Medium: 0, Long: 0, Mega: 0 }; // Initialize missing tracking data
 
 // Hybrid Audio Logic (Mic + Serial)
 let audioCtx;
@@ -547,6 +548,8 @@ function executeJump(freq, isCorrect) {
                 frog.x = lastPlatform.x + (lastPlatform.width / 2) - 30;
                 frog.y = lastPlatform.y - frog.height;
                 frog.vy = 0;
+                frog.vx = 0;
+                frog.isJumping = false; // RELEASE LOCK so student can try again
             }, 300);
         }
 
