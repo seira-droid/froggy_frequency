@@ -532,30 +532,21 @@ function executeJump(freq, isCorrect) {
     const settings = ageSettings[currentAge];
 
     if (!isCorrect) {
-        // --- WRONG SOUND RESET ---
-        statusText.innerText = "❌ Incorrect Sound!";
+        // --- WRONG SOUND: STAY IN PLACE (NO MOVEMENT) ---
+        statusText.innerText = "❌ Speak '" + prompts[currentPromptIdx].target + "' Pitch!";
         statusText.style.color = "#ff5252";
 
-        // Visual "Fail" effect
+        // Brief shock/shake visual without displacement
         spawnParticles(frog.x + 30, frog.y + 30, '#ff5252');
-        frog.vx = 0;
-        frog.vy = 5; // Small stumble fall
 
-        // Find last visited platform to reset to
-        const lastPlatform = platforms.findLast(p => p.visited);
-        if (lastPlatform) {
-            setTimeout(() => {
-                frog.x = lastPlatform.x + (lastPlatform.width / 2) - 30;
-                frog.y = lastPlatform.y - frog.height;
-                frog.vy = 0;
-                frog.vx = 0;
-                frog.isJumping = false; // RELEASE LOCK so student can try again
-            }, 300);
-        }
+        // Reset state so it's not "jumping"
+        frog.vx = 0;
+        frog.vy = 0;
+        frog.isJumping = false;
 
         if (sysLog) {
             const entry = document.createElement('div');
-            entry.innerText = `[WRONG] Freq: ${Math.round(freq)}Hz | Expected: ${prompts[currentPromptIdx].target}`;
+            entry.innerText = `[REJECTED] Freq: ${Math.round(freq)}Hz | Must reach ${prompts[currentPromptIdx].target}`;
             entry.style.color = '#ff5252';
             sysLog.prepend(entry);
         }
@@ -753,9 +744,25 @@ function resetGame() {
 function generatePlatform() {
     const last = platforms[platforms.length - 1];
     const h = canvas.height || 600;
-    const newX = last.x + 220 + Math.random() * 80; // Slightly tighter spacing
+
+    // PROGRESSIVE DENSITY: Platforms get more frequent as you go
+    const spacingReduction = Math.min(100, score * 2);
+    const newX = last.x + (220 - spacingReduction) + Math.random() * 80;
     const newY = Math.max(150, Math.min(h - 100, last.y + (Math.random() * 160 - 80)));
-    platforms.push({ x: newX, y: newY, width: platformWidth, visited: false });
+
+    const isGoal = (score >= 45 && !platforms.some(p => p.isGoal)); // Target appears near 50
+    platforms.push({ x: newX, y: newY, width: platformWidth, visited: false, isGoal: isGoal });
+
+    // Spawn extra "Branch" platforms to make the pond look fuller
+    if (score > 10 && Math.random() > 0.6) {
+        platforms.push({
+            x: newX + 150,
+            y: newY + (Math.random() * 100 - 50),
+            width: platformWidth * 0.8,
+            visited: false,
+            extra: true
+        });
+    }
 }
 
 function update() {
@@ -871,7 +878,18 @@ function update() {
                 setTimeout(() => { jumpCooldown = false; }, 150);
             }
             if (!p.visited) {
-                p.visited = true; score++; scoreEl.innerText = score; generatePlatform();
+                p.visited = true;
+                score++;
+                scoreEl.innerText = score;
+                generatePlatform();
+
+                // CHECK FOR VICTORY TARGET (Score 50)
+                if (score >= 50 && p.isGoal) {
+                    gameActive = false;
+                    promptTextEl.innerText = "🏆 TARGET REACHED! YOU WIN!";
+                    spawnParticles(frog.x + 30, frog.y, '#FFD700');
+                    setTimeout(() => { if (confirm("Goal Surpassed! Restart Adventure?")) resetGame(); }, 1500);
+                }
             }
         }
     });
@@ -1034,7 +1052,22 @@ function draw() {
     // Platforms
     platforms.forEach(p => {
         const cx = p.x + p.width / 2;
-        ctx.fillStyle = '#2E7D32'; ctx.beginPath(); ctx.ellipse(cx, p.y + 5, p.width / 2, 10, 0, 0, Math.PI * 2); ctx.fill();
+        // Goal Platform looks different
+        if (p.isGoal) {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "#FFD700";
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath(); ctx.ellipse(cx, p.y + 5, p.width / 2, 10, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            // Draw a tiny flag
+            ctx.fillStyle = "#ff5252";
+            ctx.fillRect(cx - 2, p.y - 40, 4, 40);
+            ctx.beginPath(); ctx.moveTo(cx + 2, p.y - 40); ctx.lineTo(cx + 20, p.y - 30); ctx.lineTo(cx + 2, p.y - 20); ctx.fill();
+        } else {
+            ctx.fillStyle = p.extra ? '#1B5E20' : '#2E7D32'; // Extra platforms are darker
+            ctx.beginPath(); ctx.ellipse(cx, p.y + 5, p.width / 2, 10, 0, 0, Math.PI * 2); ctx.fill();
+        }
+
         ctx.fillStyle = '#F06292';
         for (let i = 0; i < 6; i++) {
             const a = (i * Math.PI) / 3; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * 12, p.y - 5 + Math.sin(a) * 3, 10, 5, a, 0, Math.PI * 2); ctx.fill();
