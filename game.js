@@ -200,7 +200,7 @@ const promptSets = {
     ]
 };
 
-let currentSet = 'Jetpack';
+let currentSet = 'Vowels'; // Changed default from 'Jetpack' to 'Vowels' for strict tasking
 let prompts = promptSets[currentSet];
 let currentPromptIdx = 0;
 let jumpsInCurrentPrompt = 0;
@@ -518,9 +518,6 @@ function handleJump(freq) {
 
     if (isCorrect) {
         executeJump(freq, true);
-    } else if (freq > settings.low) {
-        // Wrong sound detected (above noise floor but outside target range)
-        executeJump(freq, false);
     }
 
     soundBufferFrames = 0; // Reset after attempt
