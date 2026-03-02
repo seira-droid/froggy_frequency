@@ -1353,8 +1353,22 @@ resetGame = function () {
     originalReset();
 }
 
+// UI Toggle Logic for Technical Panel
+const techPanel = document.getElementById('technical-panel');
+const toggleSettingsBtn = document.getElementById('toggle-settings-btn');
+const closeTechBtn = document.getElementById('close-tech-btn');
+
+if (toggleSettingsBtn) {
+    toggleSettingsBtn.onclick = () => { techPanel.style.display = 'flex'; };
+}
+if (closeTechBtn) {
+    closeTechBtn.onclick = () => { techPanel.style.display = 'none'; };
+}
+
 // Initialization
-micBtn.addEventListener('click', initMic);
+micBtn.addEventListener('click', () => {
+    initMic();
+});
 connectBtn.addEventListener('click', initSerial);
 startBtn.addEventListener('click', async () => {
     if (audioCtx && audioCtx.state === 'suspended') {
@@ -1363,35 +1377,18 @@ startBtn.addEventListener('click', async () => {
     gameActive = true;
     overlay.style.display = 'none';
     statusDot.className = 'status-dot connected';
-    statusText.innerText = 'Awaiting Voice...';
-
-    // Show diagnostic log for mic users
-    document.getElementById('diagnostic-log').style.display = 'block';
+    statusText.innerText = 'Let\'s Go!'; // Kid friendly
 
     resetGame();
     updatePrompt();
     if (!audioCtx) initMic();
 });
 
-// DIAGNOSTIC FORCE JUMP
-document.getElementById('force-jump-btn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (gameActive) {
-        executeJump(350); // Mid-range force jump
-    }
-});
-
-// Debug Manual Jump Removed for Strict Testing
-
+// Resizing logic
 const resizeCanvas = () => {
-    // Ensure the container fills available space and canvas follows
-    const container = document.getElementById('game-container');
     const headerHeight = document.querySelector('header').offsetHeight;
-
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - headerHeight;
-
-    // Reposition frog if it goes out of bounds on resize
     if (frog.y > canvas.height) resetGame();
 };
 window.addEventListener('resize', resizeCanvas);

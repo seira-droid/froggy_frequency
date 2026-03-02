@@ -68,78 +68,153 @@ body {
     }
 }
 
-header {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--glass-border);
-    padding: 15px 30px;
+/* Child-Friendly HUD */
+.child-hud {
     display: flex;
-    justify-content: space-between;
+    gap: 30px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 10px 25px;
+    border-radius: 50px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.hud-item {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    z-index: 100;
 }
 
-h1 {
-    font-size: 2rem;
-    background: linear-gradient(to right, var(--neon-green), var(--neon-blue));
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+.hud-label {
+    font-size: 0.6rem;
     font-weight: 800;
-    letter-spacing: -1px;
-    filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.3));
+    color: var(--neon-blue);
+    letter-spacing: 1px;
 }
 
-#nav-controls {
-    display: flex;
-    gap: 10px;
+.hud-val {
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 10px var(--neon-blue);
 }
 
-.nav-btn {
-    background: transparent;
+.hud-level {
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    padding-left: 15px;
+}
+
+/* Playful Toy Buttons */
+.toy-btn {
+    background: linear-gradient(135deg, #ff0080, #ff8c00);
     color: white;
-    border: 1px solid var(--glass-border);
-    padding: 8px 20px;
-    border-radius: 20px;
+    border: none;
+    padding: 15px 35px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 900;
     cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
+    box-shadow: 0 8px 0 #cc0066, 0 15px 25px rgba(255, 0, 128, 0.4);
+    transition: all 0.1s;
+    text-transform: uppercase;
 }
 
-.nav-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
+.toy-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 4px 0 #cc0066, 0 8px 15px rgba(255, 0, 128, 0.4);
 }
 
-#controls {
+.settings-gear {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
     display: flex;
     align-items: center;
-    gap: 20px;
+    justify-content: center;
+    transition: transform 0.3s;
 }
 
-.premium-btn {
-    background: linear-gradient(135deg, var(--neon-green), var(--primary-dark));
+.settings-gear:hover {
+    transform: rotate(90deg);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.smart-badge {
+    display: block;
+    margin-top: 5px;
+    background: #44ff44;
     color: #000;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 30px;
+    font-size: 0.6rem;
     font-weight: 800;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+    padding: 3px 10px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+/* Hidden Technical Panel Overlay */
+.tech-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.tech-panel-content {
+    background: #1a1a2e;
+    padding: 40px;
+    border-radius: 30px;
+    width: 90%;
+    max-width: 600px;
+    position: relative;
+    border: 2px solid var(--neon-blue);
+}
+
+.tech-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.tech-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tech-item label {
+    font-size: 0.7rem;
     text-transform: uppercase;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
+    font-weight: 700;
+    color: var(--neon-blue);
 }
 
-.premium-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 25px rgba(0, 255, 136, 0.5);
-    filter: brightness(1.1);
+.tech-meters {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
-.premium-btn.active-mic {
-    background: #ff5252;
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
 }
 
 .premium-select {

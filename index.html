@@ -17,67 +17,83 @@
 <body>
     <div id="game-container">
         <header>
-            <h1>Froggy Frequency <span class="version-tag">Quantum Edition</span> <span id="easy-mode-badge"
-                    style="background:#44ff44; color:#000; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; vertical-align: middle;">Smart
-                    Mode Active</span></h1>
-            <div id="nav-controls">
-                <button id="game-nav-btn" class="nav-btn active">Game</button>
-                <!-- Hidden button for trainer access -->
-                <button id="trainer-access-btn" class="nav-btn" style="opacity: 0.1; cursor: default;">.</button>
+            <div class="child-hud">
+                <div class="hud-item">
+                    <span class="hud-label">WORLD</span>
+                    <span id="world-name" class="hud-val">The Foggy Pond</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">SCORE</span>
+                    <span id="score" class="hud-val">0</span>
+                </div>
+                <div class="hud-item hud-level">
+                    <span class="hud-label">LEVEL</span>
+                    <span id="level-val" class="hud-val">1</span>
+                </div>
             </div>
-            <div id="controls">
-                <button id="mic-btn" class="premium-btn">Enable Mic</button>
-                <button id="connect-btn" class="premium-btn">Connect Arduino</button>
+
+            <div class="main-actions">
+                <button id="mic-btn" class="toy-btn">🎤 Start Listening</button>
                 <div id="status">
                     <span class="status-dot"></span>
-                    <span id="status-text">System Idle</span>
-                </div>
-                <select id="age-select" class="premium-select">
-                    <option value="toddler">Toddler (High Pitch)</option>
-                    <option value="child" selected>Child (Standard)</option>
-                    <option value="adult">Adult (Deep Pitch)</option>
-                </select>
-                <select id="category-select" class="premium-select">
-                    <option value="Vowels">Train Vowels</option>
-                    <option value="Words">Train Words</option>
-                    <option value="Jetpack" selected>Jetpack Challenge</option>
-                </select>
-                <div class="setting-group">
-                    <label>Sensitivity (Hz)</label>
-                    <input type="range" id="sensitivity-slider" min="1" max="1000" value="180" class="premium-slider">
-                    <span id="sensitivity-val">180</span>
-                    <div class="meter-bg">
-                        <div id="volume-meter" class="meter-fill"></div>
-                    </div>
-                </div>
-                <div class="vocal-specs">
-                    <div class="spec-label">POWER</div>
-                    <div id="power-val" class="spec-val">0%</div>
-                    <button id="force-jump-btn" class="premium-btn secondary"
-                        style="padding: 5px 10px; font-size: 0.6rem; margin-top: 5px;">Diag: Force Jump</button>
+                    <span id="status-text">Ready</span>
                 </div>
             </div>
-            <div class="stats">
-                <div class="stat-item">World: <span id="world-name">The Foggy Pond</span></div>
-                <div class="stat-item">Level: <span id="level-val">1</span></div>
-                <div class="stat-item">Score: <span id="score">0</span></div>
-                <div class="stat-item">Freq: <span id="freq-val">0</span>Hz</div>
-            </div>
-            <div id="biofeedback-sidebar">
-                <div class="bio-widget">
-                    <label>Stability</label>
-                    <div class="meter-bg mini">
-                        <div id="stability-meter" class="meter-fill"></div>
-                    </div>
-                </div>
-                <div class="bio-widget">
-                    <label>Breath</label>
-                    <div class="meter-bg mini">
-                        <div id="breath-bar" class="meter-fill"></div>
-                    </div>
-                </div>
+
+            <div class="parent-controls">
+                <button id="toggle-settings-btn" class="settings-gear">⚙️</button>
+                <span id="easy-mode-badge" class="smart-badge">Smart Mode Active</span>
             </div>
         </header>
+
+        <!-- Technical Panel (Now Hidden by Default) -->
+        <div id="technical-panel" class="tech-panel-overlay" style="display: none;">
+            <div class="tech-panel-content">
+                <button id="close-tech-btn" class="close-btn">&times;</button>
+                <h3>🔧 Professional Settings</h3>
+                <div class="tech-grid">
+                    <div class="tech-item">
+                        <label>Target Audience</label>
+                        <select id="age-select" class="premium-select">
+                            <option value="toddler">Toddler (High)</option>
+                            <option value="child" selected>Child (Standard)</option>
+                            <option value="adult">Adult (Deep)</option>
+                        </select>
+                    </div>
+                    <div class="tech-item">
+                        <label>Training Stage</label>
+                        <select id="category-select" class="premium-select">
+                            <option value="Vowels">Vowels Only</option>
+                            <option value="Words">Full Words</option>
+                            <option value="Jetpack">Free Flight</option>
+                        </select>
+                    </div>
+                    <div class="tech-item">
+                        <label>Mic Sensitivity (Hz)</label>
+                        <input type="range" id="sensitivity-slider" min="1" max="1000" value="180"
+                            class="premium-slider">
+                        <span id="sensitivity-val">180</span>
+                    </div>
+                    <div class="tech-item">
+                        <button id="connect-btn" class="premium-btn">Link Arduino</button>
+                    </div>
+                </div>
+                <div class="tech-meters">
+                    <div class="meter-group">
+                        <label>Voice Stability</label>
+                        <div class="meter-bg">
+                            <div id="stability-meter" class="meter-fill"></div>
+                        </div>
+                    </div>
+                    <div class="meter-group">
+                        <label>Input Volume</label>
+                        <div class="meter-bg">
+                            <div id="volume-meter" class="meter-fill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div id="visualizer-container">
             <canvas id="visualizerCanvas"></canvas>
