@@ -361,6 +361,16 @@ function detectPitch() {
 
             const breathPercent = Math.min(100, rms * 400);
             breathBar.style.width = breathPercent + '%';
+
+            // Real-time Power Feedback for parents/therapists
+            const settings = ageSettings[currentAge];
+            let power = (freq - settings.low) / (settings.mega - settings.low);
+            power = Math.max(0.1, Math.min(1.0, power));
+            const powerEl = document.getElementById('power-val');
+            if (powerEl) {
+                powerEl.innerText = Math.round(power * 100) + '%';
+                powerEl.style.color = power > 0.8 ? '#ff5252' : (power > 0.4 ? '#44ff44' : '#00d4ff');
+            }
         } else {
             statusText.innerText = '❌ Keep it Steady!';
             statusText.style.color = "#FFC107";
@@ -616,17 +626,14 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
 
     // --- LINEAR PROPORTIONAL JUMP ENGINE ---
     const minF = settings.low;
-    const maxF = settings.mega * 1.5;
+    const maxF = settings.mega; // Use 100% of mega for 100% power
     let power = (freq - minF) / (maxF - minF);
-    power = Math.max(0.1, Math.min(1.3, power)); // Minimum jump power 0.1
-
-    // Update Power UI
-    document.getElementById('power-val').innerText = Math.round(power * 100) + '%';
+    power = Math.max(0.05, Math.min(1.2, power)); // Allow "over-shouting" for extra kick
 
     // Calculate precise physics based on power
-    // PHYSICS OVERHAUL: Increased horizontal momentum to ensure platforms are reachable
-    frog.vy = -13 - (power * 12); // Max -25
-    frog.vx = 8 + (power * 15);   // Max 23
+    // PHYSICS OVERHAUL: More dramatic difference between Small and Long jumps
+    frog.vy = -12 - (power * 16); // High jump range: 12 - 28
+    frog.vx = 6 + (power * 24);   // Distance range: 6 - 30
 
     // Determine Jump Type
     let jumpType = "Small";
