@@ -579,16 +579,10 @@ function handleJump(freq) {
     // COOLDOWN CHECK: Prevents rapid-fire jumping
     if (jumpCooldown) return;
 
-    if (canJump) {
-        executeJump(freq, isCorrectPitch, isCorrectSound);
-        // Set a 400ms physical cooldown so they can't jump instantly again
-        jumpCooldown = true;
-        setTimeout(() => { jumpCooldown = false; }, 400);
-    } else {
-        // If they are making the wrong sound, tell them!
-        executeJump(freq, isCorrectPitch, isCorrectSound);
-    }
-
+    executeJump(freq, isCorrectPitch, isCorrectSound);
+    // Set a 400ms physical cooldown so they can't jump instantly again
+    jumpCooldown = true;
+    setTimeout(() => { jumpCooldown = false; }, 400);
     soundBufferFrames = 0;
 }
 
@@ -601,21 +595,21 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     if (!isCorrect) {
         // --- SPECIFIC ERROR FEEDBACK ---
         if (!isSoundCorrect) {
-            statusText.innerText = "❌ Match the Vowel Sound!";
+            statusText.innerText = "⭐ Try to match the vowel sound!";
         } else if (!isPitchCorrect && !easyMode) {
             const target = prompts[currentPromptIdx].target;
-            statusText.innerText = `❌ Need ${target} Pitch!`;
+            statusText.innerText = `⭐ Try to hit the ${target} Pitch!`;
         }
-        statusText.style.color = "#ff5252";
-        spawnParticles(frog.x + 30, frog.y + 30, '#ff5252');
+        statusText.style.color = "#FFC107";
+        spawnParticles(frog.x + 30, frog.y + 30, '#FFC107');
 
         if (sysLog) {
             const entry = document.createElement('div');
-            entry.innerText = `[REJECTED] Vowel: ${isSoundCorrect ? 'OK' : 'FAIL'} | Pitch: ${isPitchCorrect ? 'OK' : 'FAIL'} (${Math.round(freq)}Hz)`;
-            entry.style.color = '#ff5252';
+            entry.innerText = `[FEEDBACK] Vowel: ${isSoundCorrect ? 'OK' : 'FAIL'} | Pitch: ${isPitchCorrect ? 'OK' : 'FAIL'} (${Math.round(freq)}Hz)`;
+            entry.style.color = '#FFC107';
             sysLog.prepend(entry);
         }
-        return;
+        // REMOVED 'return;' here to ensure the frog still jumps based on frequency even if the vowel is slightly off.
     }
 
     // --- EASY MODE ENCOURAGEMENT ---
