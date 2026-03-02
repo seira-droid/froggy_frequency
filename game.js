@@ -1375,22 +1375,28 @@ if (closeTechBtn) {
 }
 
 // Initialization
-micBtn.addEventListener('click', () => {
-    initMic();
-});
-connectBtn.addEventListener('click', initSerial);
-startBtn.addEventListener('click', async () => {
+function startGame() {
     if (audioCtx && audioCtx.state === 'suspended') {
-        await audioCtx.resume();
+        audioCtx.resume();
     }
     gameActive = true;
     overlay.style.display = 'none';
     statusDot.className = 'status-dot connected';
-    statusText.innerText = 'Let\'s Go!'; // Kid friendly
+    statusText.innerText = 'Let\'s Go!';
 
-    resetGame();
+    if (platforms.length === 0) resetGame();
     updatePrompt();
-    if (!audioCtx) initMic();
+}
+
+micBtn.addEventListener('click', () => {
+    initMic().then(startGame);
+});
+connectBtn.addEventListener('click', () => {
+    initSerial().then(startGame);
+});
+startBtn.addEventListener('click', () => {
+    startGame();
+    if (!audioCtx && !isSerialEnabled) initMic();
 });
 
 // DIAGNOSTIC FORCE JUMP (In Settings)
@@ -1410,9 +1416,12 @@ const resizeCanvas = () => {
     const headerHeight = document.querySelector('header').offsetHeight;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - headerHeight;
-    if (frog.y > canvas.height) resetGame();
+    // Always reposition frog properly on resize
+    if (platforms.length === 0 || frog.y > canvas.height) resetGame();
 };
 window.addEventListener('resize', resizeCanvas);
+
+resetGame(); // Ensure Initial Render
 resizeCanvas();
 
 renderProfiles();
