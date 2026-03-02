@@ -624,8 +624,9 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     document.getElementById('power-val').innerText = Math.round(power * 100) + '%';
 
     // Calculate precise physics based on power
-    frog.vy = -14 - (power * 14); // Dynamic Height
-    frog.vx = 12 + (power * 20);  // Dynamic Distance
+    // PHYSICS OVERHAUL: Reduced horizontal speed for more controllable jumps
+    frog.vy = -12 - (power * 10); // Max -22
+    frog.vx = 4 + (power * 5);    // Max 9
 
     // Determine Jump Type
     let jumpType = "Small";
@@ -843,23 +844,20 @@ function update() {
     frog.y += frog.vy;
     frog.x += frog.vx;
 
-    if (currentSet === 'Jetpack') {
-        // In jetpack mode, move camera horizontally to keep frog centered
-        // but allow vertical movement (scrolling up)
-        if (frog.y < canvas.height / 3) {
-            const diff = canvas.height / 3 - frog.y;
-            frog.y = canvas.height / 3;
-            platforms.forEach(p => p.y += diff);
-            ripples.forEach(r => r.y += diff);
-            particles.forEach(p => p.y += diff);
-            bubbles.forEach(b => b.y += diff);
-            lanternGoal.y += diff;
-            ambientLanterns.forEach(al => al.y += diff);
-            stars.forEach(s => s.y += diff * 0.1);
-        }
-    } else {
-        frog.vx *= 0.985;
+
+    // Vertical Follow: Move world down if frog goes up past mid-screen
+    if (frog.y < canvas.height / 2.5) {
+        const diff = canvas.height / 2.5 - frog.y;
+        frog.y = canvas.height / 2.5;
+        platforms.forEach(p => p.y += diff);
+        ripples.forEach(r => r.y += diff);
+        particles.forEach(p => p.y += diff);
+        bubbles.forEach(b => b.y += diff);
+        lanternGoal.y += diff;
+        ambientLanterns.forEach(al => al.y += diff);
+        stars.forEach(s => s.y += diff * 0.1);
     }
+    frog.vx *= 0.985;
 
     // Camera follow & Parallax
     if (frog.x > canvas.width / 2) {
@@ -1383,6 +1381,18 @@ startBtn.addEventListener('click', async () => {
     updatePrompt();
     if (!audioCtx) initMic();
 });
+
+// DIAGNOSTIC FORCE JUMP (In Settings)
+const forceJumpBtn = document.getElementById('force-jump-btn');
+if (forceJumpBtn) {
+    forceJumpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (gameActive) {
+            // Give it a mid-range jump
+            executeJump(350, true, true);
+        }
+    });
+}
 
 // Resizing logic
 const resizeCanvas = () => {
