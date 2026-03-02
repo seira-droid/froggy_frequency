@@ -82,8 +82,8 @@ class AdaptiveIntelligence {
             console.log("AI: Adjusting thresholds DOWN to help user.");
         }
 
-        // Limit range
-        currentSett.low = Math.max(50, Math.min(400, currentSett.low));
+        // Limit range: Hard-lock the floor to 180Hz to prevent background hum triggers
+        currentSett.low = Math.max(180, Math.min(450, currentSett.low));
         sensitivitySlider.value = currentSett.low;
         sensitivityValEl.innerText = Math.round(currentSett.low);
     }
@@ -126,7 +126,7 @@ let selectedChild = null;
 let gameActive = false;
 let isPrompting = false;
 let soundBufferFrames = 0;
-const NOISE_GATE_THRESHOLD = 2; // Standardized
+const NOISE_GATE_THRESHOLD = 1; // Sensitive enough for a whisper
 let portLocked = false;
 let profileDatabase = [];
 try {
@@ -231,7 +231,10 @@ let fireflies = Array.from({ length: 30 }, () => ({
 let frogTrail = [];
 let currentFreq = 0; // Global track for aura scaling
 let freqStabilityBuffer = []; // Tracking consistent phonation
-let sessionStats = { Small: 0, Medium: 0, Long: 0, Mega: 0 }; // Initialize missing tracking data
+let sessionStats = { Small: 0, Medium: 0, Long: 0, Mega: 0 };
+let jumpCooldown = false;
+let needsSilence = false;
+let easyMode = true; // NEW: Make it fun by default!
 
 // Hybrid Audio Logic (Mic + Serial)
 let audioCtx;
@@ -329,18 +332,22 @@ function detectPitch() {
     // Update Volume Meter (Actual loudness now, not frequency)
     const volPercent = Math.min(100, rms * 500);
     volumeMeter.style.width = volPercent + '%';
-    volumeMeter.style.background = rms > 0.01 ? '#00ff88' : '#555';
+    volumeMeter.style.background = rms > 0.005 ? '#00ff88' : '#555';
 
     const freq = autoCorrelate(pitchDataArray, audioCtx.sampleRate);
 
-    // VOICE SPECIFICITY FIX: Only respond if frequency is within human vocal range (40Hz - 1200Hz)
-    // AND check for Pitch Stability (Noise is erratic, Vowels are steady)
+    // DIAGNOSTIC: Log if any signal is detected but filtered
+    const log = document.getElementById('diagnostic-log');
+
     if (freq !== -1 && freq > 40 && freq < 1200) {
         freqStabilityBuffer.push(freq);
         if (freqStabilityBuffer.length > 4) freqStabilityBuffer.shift();
 
         const maxDiff = Math.max(...freqStabilityBuffer) - Math.min(...freqStabilityBuffer);
-        const isSteady = freqStabilityBuffer.length >= 3 && maxDiff < (freq * 0.25); // 25% jitter allowed
+        // ZEN STABILITY: Only requires 2 units of sound and allows 50% jitter in Easy Mode
+        const jitterLimit = easyMode ? 0.50 : 0.12;
+        const framesRequired = easyMode ? 2 : 4;
+        const isSteady = freqStabilityBuffer.length >= framesRequired && maxDiff < (freq * jitterLimit);
 
         if (isSteady) {
             currentFreq = freq;
@@ -355,10 +362,22 @@ function detectPitch() {
             const breathPercent = Math.min(100, rms * 400);
             breathBar.style.width = breathPercent + '%';
         } else {
-            statusText.innerText = 'Analyzing Voice...';
+            statusText.innerText = '❌ Keep it Steady!';
+            statusText.style.color = "#FFC107";
+            if (log && Math.random() < 0.1) { // Throttle logs
+                const entry = document.createElement('div');
+                entry.innerText = `[STABILITY] Jitter: ${Math.round((maxDiff / freq) * 100)}% (Limit 12%)`;
+                entry.style.color = '#FFA000';
+                log.prepend(entry);
+            }
         }
     } else {
-        // REMOVED 'Basic Sound Detected' fallback to prevent non-vocal jumps
+        if (rms > 0.01 && freq === -1 && log && Math.random() < 0.05) {
+            const entry = document.createElement('div');
+            entry.innerText = `[PITCH] Sound detected but no clear pitch (RMS: ${rms.toFixed(3)})`;
+            entry.style.color = '#888';
+            log.prepend(entry);
+        }
         currentFreq = 0;
         breathBar.style.width = '0%';
         if (gameActive) {
@@ -449,7 +468,7 @@ function autoCorrelate(buf, sampleRate) {
         rms += val * val;
     }
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.015) return -1; // Increased noise floor (was 0.002) to filter background hum
+    if (rms < 0.005) return -1; // Lowered floor for quiet voices
 
     // Standard Autocorrelation with simpler peak detection
     let correlations = new Float32Array(SIZE);
@@ -476,12 +495,40 @@ function autoCorrelate(buf, sampleRate) {
     return -1;
 }
 
+function checkVowelMatch(promptText) {
+    if (!analyser) return true;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(dataArray);
+
+    let lowE = 0;  // 100-800Hz
+    let highE = 0; // 2000Hz+
+    const binSize = audioCtx ? audioCtx.sampleRate / analyser.fftSize : 22;
+
+    for (let i = 0; i < dataArray.length; i++) {
+        const f = i * binSize;
+        if (f > 100 && f < 800) lowE += dataArray[i];
+        if (f > 2200) highE += dataArray[i];
+    }
+
+    const text = promptText.toLowerCase();
+    // EE sounds have very high energy in second/third formants (high freq)
+    if (text.includes('ee') || text.includes('bee')) {
+        return highE > (lowE * 0.2); // Expect significant high-frequency resonance
+    }
+    // AH/OO sounds are more bass-heavy
+    if (text.includes('ah') || text.includes('moo') || text.includes('oo')) {
+        return highE < (lowE * 0.15); // Expect capped high frequencies
+    }
+    return true; // Fallback for general words
+}
+
 function handleJump(freq) {
     const log = document.getElementById('diagnostic-log');
 
     // Only allow jump if not already jumping AND either on a platform or near-zero velocity
-    if (!gameActive) {
-        soundBufferFrames = 0;
+    // CRITICAL: Block all jumps if celebrating a previous correct answer or not active
+    if (!gameActive || isPrompting) {
+        soundBufferFrames = -2; // Hard reset with delay
         return;
     }
 
@@ -491,7 +538,7 @@ function handleJump(freq) {
         soundBufferFrames = 0;
     }
 
-    if (soundBufferFrames < 3) return; // Robust filter: Requires 3 frames (~50ms) of sustained voice
+    if (soundBufferFrames < 2) return; // Reaction is now almost instant
 
     const targetCat = prompts[currentPromptIdx].target;
     // Skip target check in Jetpack mode as it's continuous contrast
@@ -509,45 +556,62 @@ function handleJump(freq) {
     };
 
     const targetRange = ranges[targetCat];
-    if (!targetRange) {
-        executeJump(freq, true); // Fallback for undefined targets
-        return;
+    if (!targetRange) return;
+
+    // --- RECOGNITION CHECK ---
+    const isCorrectPitch = freq >= targetRange[0] && (targetRange[1] === Infinity || freq < targetRange[1]);
+    const isCorrectSound = checkVowelMatch(prompts[currentPromptIdx].text);
+
+    // SMART MODE LOGIC: Must match the vowel (Ahhh vs Hello), 
+    // but pitch matches are automatic in Easy Mode to prevent frustration.
+    const canJump = easyMode ? isCorrectSound : (isCorrectPitch && isCorrectSound);
+
+    // COOLDOWN CHECK: Prevents rapid-fire jumping
+    if (jumpCooldown) return;
+
+    if (canJump) {
+        executeJump(freq, isCorrectPitch, isCorrectSound);
+        // Set a 400ms physical cooldown so they can't jump instantly again
+        jumpCooldown = true;
+        setTimeout(() => { jumpCooldown = false; }, 400);
+    } else {
+        // If they are making the wrong sound, tell them!
+        executeJump(freq, isCorrectPitch, isCorrectSound);
     }
 
-    const isCorrect = freq >= targetRange[0] && (targetRange[1] === Infinity || freq < targetRange[1]);
-
-    if (isCorrect) {
-        executeJump(freq, true);
-    }
-
-    soundBufferFrames = 0; // Reset after attempt
+    soundBufferFrames = 0;
 }
 
-function executeJump(freq, isCorrect) {
+function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     if (frog.isJumping) return;
 
     const settings = ageSettings[currentAge];
+    const isCorrect = easyMode ? isSoundCorrect : (isPitchCorrect && isSoundCorrect);
 
     if (!isCorrect) {
-        // --- WRONG SOUND: STAY IN PLACE (NO MOVEMENT) ---
-        statusText.innerText = "❌ Speak '" + prompts[currentPromptIdx].target + "' Pitch!";
+        // --- SPECIFIC ERROR FEEDBACK ---
+        if (!isSoundCorrect) {
+            statusText.innerText = "❌ Match the Vowel Sound!";
+        } else if (!isPitchCorrect && !easyMode) {
+            const target = prompts[currentPromptIdx].target;
+            statusText.innerText = `❌ Need ${target} Pitch!`;
+        }
         statusText.style.color = "#ff5252";
-
-        // Brief shock/shake visual without displacement
         spawnParticles(frog.x + 30, frog.y + 30, '#ff5252');
-
-        // Reset state so it's not "jumping"
-        frog.vx = 0;
-        frog.vy = 0;
-        frog.isJumping = false;
 
         if (sysLog) {
             const entry = document.createElement('div');
-            entry.innerText = `[REJECTED] Freq: ${Math.round(freq)}Hz | Must reach ${prompts[currentPromptIdx].target}`;
+            entry.innerText = `[REJECTED] Vowel: ${isSoundCorrect ? 'OK' : 'FAIL'} | Pitch: ${isPitchCorrect ? 'OK' : 'FAIL'} (${Math.round(freq)}Hz)`;
             entry.style.color = '#ff5252';
             sysLog.prepend(entry);
         }
         return;
+    }
+
+    // --- EASY MODE ENCOURAGEMENT ---
+    if (easyMode && (!isPitchCorrect || !isSoundCorrect)) {
+        statusText.innerText = "✨ Good Effort! Keep Singing!";
+        statusText.style.color = "#44ff44";
     }
 
     // --- LINEAR PROPORTIONAL JUMP ENGINE ---
@@ -591,12 +655,16 @@ function executeJump(freq, isCorrect) {
         currentPromptIdx = (currentPromptIdx + 1) % prompts.length;
         isPrompting = false;
         updatePrompt();
-    }, 1500);
+    }, 800); // Reduced from 1500ms for snappier feedback
 }
 
 function handleJetpack(freq) {
     const settings = ageSettings[currentAge];
-    if (freq > settings.low) {
+    // JETPACK SELECTIVITY: Only fly if frequency is in a recognized speech range
+    // This prevents random noises (claps, etc) from triggering continuous flight
+    const isVocal = freq >= settings.low && freq < 1200;
+
+    if (isVocal) {
         jetpackActive = true;
         sustainedTime++;
 
@@ -1313,13 +1381,7 @@ document.getElementById('force-jump-btn').addEventListener('click', (e) => {
     }
 });
 
-// DEBUG MANUAL JUMP
-window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && gameActive) {
-        e.preventDefault();
-        executeJump(300); // Simulate mid-range jump
-    }
-});
+// Debug Manual Jump Removed for Strict Testing
 
 const resizeCanvas = () => {
     // Ensure the container fills available space and canvas follows

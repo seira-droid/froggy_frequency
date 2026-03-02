@@ -17,7 +17,9 @@
 <body>
     <div id="game-container">
         <header>
-            <h1>Froggy Frequency <span class="version-tag">Quantum Edition</span></h1>
+            <h1>Froggy Frequency <span class="version-tag">Quantum Edition</span> <span id="easy-mode-badge"
+                    style="background:#44ff44; color:#000; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; vertical-align: middle;">Smart
+                    Mode Active</span></h1>
             <div id="nav-controls">
                 <button id="game-nav-btn" class="nav-btn active">Game</button>
                 <!-- Hidden button for trainer access -->
@@ -41,9 +43,9 @@
                     <option value="Jetpack" selected>Jetpack Challenge</option>
                 </select>
                 <div class="setting-group">
-                    <label>Sensitivity</label>
-                    <input type="range" id="sensitivity-slider" min="1" max="50" value="2" class="premium-slider">
-                    <span id="sensitivity-val">2</span>
+                    <label>Sensitivity (Hz)</label>
+                    <input type="range" id="sensitivity-slider" min="1" max="1000" value="180" class="premium-slider">
+                    <span id="sensitivity-val">180</span>
                     <div class="meter-bg">
                         <div id="volume-meter" class="meter-fill"></div>
                     </div>
