@@ -624,9 +624,9 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     document.getElementById('power-val').innerText = Math.round(power * 100) + '%';
 
     // Calculate precise physics based on power
-    // PHYSICS OVERHAUL: Reduced horizontal speed for more controllable jumps
-    frog.vy = -12 - (power * 10); // Max -22
-    frog.vx = 4 + (power * 5);    // Max 9
+    // PHYSICS OVERHAUL: Increased horizontal momentum to ensure platforms are reachable
+    frog.vy = -13 - (power * 12); // Max -25
+    frog.vx = 8 + (power * 15);   // Max 23
 
     // Determine Jump Type
     let jumpType = "Small";
@@ -812,12 +812,12 @@ function generatePlatform() {
     const h = canvas.height || 600;
 
     // PROGRESSIVE DENSITY: Platforms get more frequent as you go
-    const spacingReduction = Math.min(100, score * 2);
-    const newX = last.x + (220 - spacingReduction) + Math.random() * 80;
-    const newY = Math.max(150, Math.min(h - 100, last.y + (Math.random() * 160 - 80)));
+    const spacingReduction = Math.min(120, score * 3);
+    const newX = last.x + (180 - spacingReduction) + Math.random() * 60;
+    const newY = Math.max(150, Math.min(h - 100, last.y + (Math.random() * 140 - 70)));
 
     const isGoal = (score >= 45 && !platforms.some(p => p.isGoal)); // Target appears near 50
-    platforms.push({ x: newX, y: newY, width: platformWidth, visited: false, isGoal: isGoal });
+    platforms.push({ x: newX, y: newY, width: platformWidth + 30, visited: false, isGoal: isGoal });
 
     // Spawn extra "Branch" platforms to make the pond look fuller
     if (score > 10 && Math.random() > 0.6) {
