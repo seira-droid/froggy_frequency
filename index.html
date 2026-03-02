@@ -37,7 +37,15 @@
             </div>
 
             <div class="main-actions">
-                <button id="mic-btn" class="toy-btn">🎤 Start Listening</button>
+                <div id="prompt-text"
+                    style="font-size: 1.5rem; font-weight: 900; color: #fff; margin-bottom: 10px; text-shadow: 0 0 10px var(--neon-purple); text-align: center;">
+                    Let's Play!</div>
+                <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                    <button id="mic-btn" class="toy-btn">🎤 Start Listening</button>
+                    <button id="connect-btn" class="premium-btn"
+                        style="padding: 15px 25px; font-size: 1rem; border-radius: 50px; background: var(--neon-blue); border: 2px solid #fff;">🔌
+                        Link Arduino</button>
+                </div>
                 <div id="status">
                     <span class="status-dot"></span>
                     <span id="status-text">Ready</span>
@@ -79,7 +87,8 @@
                         <span id="sensitivity-val">180</span>
                     </div>
                     <div class="tech-item">
-                        <button id="connect-btn" class="premium-btn">Link Arduino</button>
+                        <label>Arduino Override</label>
+                        <span style="font-size:0.8rem; color:#aaa;">(Use button on main screen to connect)</span>
                     </div>
                 </div>
                 <div class="tech-meters">

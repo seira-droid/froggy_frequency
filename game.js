@@ -655,11 +655,13 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
 
     // Trigger perfect match feedback
     isPrompting = true;
-    promptTextEl.innerText = "Perfect Match!";
-    promptTextEl.classList.add('active-prompt');
+    if (promptTextEl) {
+        promptTextEl.innerText = "Perfect Match!";
+        promptTextEl.classList.add('active-prompt');
+    }
 
     setTimeout(() => {
-        promptTextEl.classList.remove('active-prompt');
+        if (promptTextEl) promptTextEl.classList.remove('active-prompt');
         currentPromptIdx = (currentPromptIdx + 1) % prompts.length;
         isPrompting = false;
         updatePrompt();
@@ -743,7 +745,9 @@ function playJumpSound() {
 }
 
 function updatePrompt() {
-    promptTextEl.innerText = prompts[currentPromptIdx].text;
+    if (promptTextEl) {
+        promptTextEl.innerText = prompts[currentPromptIdx].text;
+    }
 }
 
 // Game Physics & Loop
