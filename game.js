@@ -22,7 +22,7 @@ const breathBar = document.getElementById('breath-bar');
 const worldNameEl = document.getElementById('world-name');
 const levelValEl = document.getElementById('level-val');
 const sysLog = document.getElementById('diagnostic-log');
-console.log("Froggy Frequency Logic V10.1.6 Active");
+console.log("Froggy Frequency Logic V10.1.7 Active");
 
 // --- AI ADAPTIVE INTELLIGENCE ---
 class AdaptiveIntelligence {
@@ -824,16 +824,17 @@ function resetGame() {
     score = 0;
     scoreEl.innerText = score;
 
-    // Ensure canvas dimensions are captured
-    const h = canvas.height || canvas.offsetHeight || 600;
-
-    // SPATIAL FIX: Spawn higher up in the canvas to avoid being pushed off-screen by the header
-    const spawnY = Math.min(h * 0.4, 250); 
-    platforms = [{ x: 50, y: spawnY, width: 200, visited: true }];
+    // SPATIAL FIX V2: Detect how much of the canvas is actually on screen
+    const rect = canvas.getBoundingClientRect();
+    const visibleHeight = Math.min(canvas.height, window.innerHeight - rect.top);
+    
+    // Spawn in the middle of the VISIBLE area, or upper half
+    const spawnY = Math.max(50, visibleHeight * 0.3); 
+    platforms = [{ x: 50, y: spawnY, width: 220, visited: true }];
     for (let i = 0; i < 5; i++) generatePlatform();
 
     frog.x = 100;
-    frog.y = platforms[0].y - frog.height; // Position EXACTLY on top of the first platform
+    frog.y = platforms[0].y - frog.height;
     frog.vy = 0;
     frog.vx = 0;
     frog.isJumping = false;
@@ -1115,11 +1116,19 @@ function draw() {
         ctx.beginPath(); ctx.arc(t.x, t.y, 15 * t.alpha, 0, Math.PI * 2); ctx.fill();
     });
 
-    // Background Pond (Gradient)
-    const grad = ctx.createLinearGradient(0, canvas.height - 200, 0, canvas.height);
-    grad.addColorStop(0, '#1b263b');
-    grad.addColorStop(1, '#0d1b2a');
-    ctx.fillStyle = grad;
+    // Background Pond (FULL GRADIENT)
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGrad.addColorStop(0, '#1a1a2e');
+    bgGrad.addColorStop(0.5, '#16213e');
+    bgGrad.addColorStop(1, '#0f3460');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Dynamic Pond Floor Gradient (Bottom 200px)
+    const floorGrad = ctx.createLinearGradient(0, canvas.height - 200, 0, canvas.height);
+    floorGrad.addColorStop(0, '#1b263b');
+    floorGrad.addColorStop(1, '#0d1b2a');
+    ctx.fillStyle = floorGrad;
     ctx.fillRect(0, canvas.height - 200, canvas.width, 200);
 
     // Ripples
@@ -1289,6 +1298,12 @@ function draw() {
             ctx.lineTo(frog.x + 30, frog.y + 70 + Math.random() * 10);
             ctx.fill();
         }
+    }
+
+    // DEBUG UI
+    if (frog.y < 0 || frog.y > canvas.height) {
+        ctx.fillStyle = 'white';
+        ctx.fillText(`Debug: Frog at Y=${Math.round(frog.y)}`, 10, 20);
     }
 }
 
