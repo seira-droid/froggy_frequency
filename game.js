@@ -22,6 +22,7 @@ const breathBar = document.getElementById('breath-bar');
 const worldNameEl = document.getElementById('world-name');
 const levelValEl = document.getElementById('level-val');
 const sysLog = document.getElementById('diagnostic-log');
+console.log("Froggy Frequency Logic V10.1.5 Active");
 
 // --- AI ADAPTIVE INTELLIGENCE ---
 class AdaptiveIntelligence {

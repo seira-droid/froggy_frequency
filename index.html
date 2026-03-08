@@ -34,6 +34,10 @@
                     <span class="hud-label">LEVEL</span>
                     <span id="level-val" class="hud-val">1</span>
                 </div>
+                <div class="hud-item hud-version" style="opacity: 0.4; font-size: 0.6rem;">
+                    <span class="hud-label">VER</span>
+                    <span class="hud-val">10.1.5 (FIXED)</span>
+                </div>
             </div>
 
             <div class="main-actions">
@@ -199,7 +203,15 @@
             Logs (V8.2 Active) --</div>
     </div>
 
-    <script src="game.js"></script>
+    <script src="game.js?v=10.1.5"></script>
+    <script>
+        // Emergency Force Refresh for User
+        console.log("Froggy Frequency V10.1.5 Loaded");
+        if (!localStorage.getItem('v10.1.5_clean')) {
+            localStorage.setItem('v10.1.5_clean', 'true');
+            window.location.reload(true);
+        }
+    </script>
 </body>
 
 </html>
