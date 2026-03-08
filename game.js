@@ -508,8 +508,8 @@ function autoCorrelate(buf, sampleRate) {
     return -1;
 }
 
-function checkVowelMatch(promptText) {
-    if (!analyser) return true;
+function getDetectedVowel() {
+    if (!analyser) return 'Unknown';
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(dataArray);
 
@@ -531,30 +531,29 @@ function checkVowelMatch(promptText) {
     const r2 = band2 / total;
     const r3 = band3 / total;
 
-    const text = promptText.toLowerCase();
-
-    // --- STRICT SPECTRAL SIGNATURES ---
-    
-    // Pattern for "EE" or "High" sounds (e.g., Bee, Lily, EE)
-    // Signature: Sharp spike in mid/high frequencies (F2/F3)
-    if (text.includes('bee') || text.includes('ee') || text.includes('lily') || text.includes('high')) {
-        // Must have high energy in high bands and low energy in the lowest band
-        return r3 > 0.35 && r1 < 0.40;
-    }
-
+    // Pattern for "EE" or "High" sounds
+    if (r3 > 0.35 && r1 < 0.40) return 'EE (Bee/Lily)';
     // Pattern for "Ahhh" or "Deep" sounds
-    // Signature: Concentrated energy in the low-mids
+    if (r1 > 0.65 && r3 < 0.12) return 'AH (Ahhh)';
+    // Pattern for "OO" or "Middle" sounds
+    if (r1 > 0.75 && r3 < 0.08) return 'OO (Moo/Froggy)';
+
+    return 'Unknown';
+}
+
+function checkVowelMatch(promptText) {
+    const text = promptText.toLowerCase();
+    const detected = getDetectedVowel();
+
+    if (text.includes('bee') || text.includes('ee') || text.includes('lily') || text.includes('high')) {
+        return detected.includes('EE');
+    }
     if (text.includes('ah') || text.includes('deep')) {
-        return r1 > 0.65 && r3 < 0.12;
+        return detected.includes('AH');
     }
-
-    // Pattern for "OO" or "Middle" sounds (e.g., Moo, Words)
-    // Signature: Very heavy bass, very little high end
     if (text.includes('moo') || text.includes('oo') || text.includes('froggy')) {
-        return r1 > 0.75 && r3 < 0.08;
+        return detected.includes('OO');
     }
-
-    // Default for shouts/words
     if (text.includes('shout') || text.includes('mega')) return true;
 
     return true; 
@@ -628,16 +627,29 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     const isCorrect = easyMode ? isSoundCorrect : (isPitchCorrect && isSoundCorrect);
 
     // --- VOICING VALIDATION ---
-    // Strictly block sounds that don't match the target vowel (Ahhh vs Bee)
+    // Strictly block sounds that don't match the target vowel (Requirement 1 & 2)
     if (!isSoundCorrect) {
-        statusText.innerText = "⭐ Try to match the vowel sound!";
-        statusText.style.color = "#FFC107";
-        spawnParticles(frog.x + 30, frog.y + 30, '#FFC107');
+        const detected = getDetectedVowel();
+        const expected = prompts[currentPromptIdx].text;
+        statusText.innerText = `❌ Wrong Sound! (Heard: ${detected}). Try once more!`;
+        statusText.style.color = "#ff5252";
+        spawnParticles(frog.x + 30, frog.y + 30, '#ff5252');
         
+        // Temporarily change prompt text
+        const originalText = promptTextEl.innerText;
+        promptTextEl.innerText = "Wrong Sound! Try Again!";
+        promptTextEl.style.color = "#ff5252";
+        setTimeout(() => {
+            if (promptTextEl.innerText === "Wrong Sound! Try Again!") {
+                promptTextEl.innerText = originalText;
+                promptTextEl.style.color = "#fff";
+            }
+        }, 1200);
+
         if (sysLog) {
             const entry = document.createElement('div');
-            entry.innerText = `[FEEDBACK] Vowel FAIL | Pitch: ${isPitchCorrect ? 'OK' : 'FAIL'} (${Math.round(freq)}Hz)`;
-            entry.style.color = '#FFC107';
+            entry.innerText = `[FEEDBACK] Vowel FAIL | Heard: ${detected} | Expected: ${expected}`;
+            entry.style.color = '#ff5252';
             sysLog.prepend(entry);
         }
         return; 
@@ -646,7 +658,7 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     // If vowel is correct but pitch is off, block the jump and show feedback
     if (!isPitchCorrect && !easyMode) {
         const target = prompts[currentPromptIdx].target;
-        statusText.innerText = `⭐ Great sound! But try a ${target} Pitch!`;
+        statusText.innerText = `❌ Right sound, but try a ${target} Pitch! Try once more!`;
         statusText.style.color = "#FFC107";
         spawnParticles(frog.x + 30, frog.y + 30, '#FFC107');
         return; 
@@ -884,6 +896,17 @@ function update() {
     frog.y += frog.vy;
     frog.x += frog.vx;
 
+    // --- SCREEN BOUNDARY PROTECTION (Requirement 3) ---
+    // Keep frog visible horizontally
+    if (frog.x < 10) frog.x = 10;
+    if (frog.x + frog.width > canvas.width - 10) frog.x = canvas.width - frog.width - 10;
+    // Y-axis top protection is already handled by camera follow below.
+    // If falling off the bottom, we allow it but reset once almost off-screen.
+    if (frog.y > canvas.height - frog.height / 2 && frog.vy > 0) {
+        // Just before disappearing completely, trigger reset logic
+        if (frog.y > canvas.height) resetGame();
+    }
+
 
     // Vertical Follow: Move world down if frog goes up past mid-screen
     if (frog.y < canvas.height / 3) {
@@ -1039,7 +1062,8 @@ function update() {
         promptTextEl.innerText = `Welcome to ${worlds[currentWorldIdx].name}!`;
     }
 
-    if (frog.y > canvas.height + 200) resetGame(); // Reset faster if fallen into water
+    // Falling off screen check
+    if (frog.y > canvas.height) resetGame();
 
     // PERIODIC DIAGNOSTIC
     if (Date.now() % 1000 < 20 && sysLog) {
