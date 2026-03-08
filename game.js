@@ -234,7 +234,7 @@ let freqStabilityBuffer = []; // Tracking consistent phonation
 let sessionStats = { Small: 0, Medium: 0, Long: 0, Mega: 0 };
 let jumpCooldown = false;
 let needsSilence = false;
-let easyMode = true; // Enabled to allow jumps based on vowel matching, ensuring movements even if pitch is slightly off
+let easyMode = false; // Set to false for strict pitch + vowel matching as requested. Frog only jumps for the correct sound.
 
 // Hybrid Audio Logic (Mic + Serial)
 let audioCtx;
@@ -520,22 +520,28 @@ function checkVowelMatch(promptText) {
 
     for (let i = 0; i < dataArray.length; i++) {
         const f = i * binSize;
-        if (f > 100 && f < 1000) lowE += dataArray[i]; // Broadened speech base
-        if (f > 2200 && f < 6000) highE += dataArray[i]; // Targeted formants
+        if (f > 100 && f < 1000) lowE += dataArray[i]; 
+        if (f >= 2200 && f < 6000) highE += dataArray[i]; 
     }
 
     const text = promptText.toLowerCase();
     const ratio = highE / (lowE || 1);
 
-    // EE sounds (High Pitch/Vowel) have high ratio of energy in upper formants
-    if (text.includes('ee') || text.includes('bee')) {
-        return ratio > 0.45; // Stricter threshold for 'EE'
+    // STRICT VOWEL FINGERPRINTING
+    if (text.includes('bee') || text.includes('ee') || text.includes('lily') || text.includes('froggy')) {
+        return ratio > 0.6; // High frequency bias (Sibilance/Formants for EE)
     }
-    // AH/OO sounds (Deep/Low) are concentrated in lower frequencies
-    if (text.includes('ah') || text.includes('moo') || text.includes('oo')) {
-        return ratio < 0.20; // Stricter threshold for 'Deep' sounds
+    if (text.includes('moo') || text.includes('oo') || text.includes('ah') || text.includes('deep')) {
+        return ratio < 0.15; // Low frequency bias (Bass/Depth for AH/OO)
     }
-    return true;
+    if (text.includes('shout') || text.includes('mega')) {
+        return true; // Shouts are broad spectrum, skip vowel check
+    }
+    if (text.includes('jump')) {
+        return ratio > 0.2 && ratio < 0.45; // Mid-range vowel profile
+    }
+    
+    return true; 
 }
 
 function handleJump(freq) {
@@ -628,9 +634,9 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     power = Math.max(0.05, Math.min(1.2, power)); // Allow "over-shouting" for extra kick
 
     // Calculate precise physics based on power
-    // PHYSICS OVERHAUL: Balanced for visibility and platform spacing
-    frog.vy = -16 - (power * 14); // Jump height range: 16 to 30 (Slightly higher)
-    frog.vx = 7 + (power * 15);   // Toned down horizontal speed (Prevents flying off-screen)
+    // PHYSICS OVERHAUL: Optimized to prevent frog flying off-screen
+    frog.vy = -16 - (power * 14); // Vertical propulsion (16 to 30)
+    frog.vx = 4 + (power * 6);    // Horizontal speed (4 to 10) - Drastically reduced to match gaps
 
     // Determine Jump Type
     let jumpType = "Small";
@@ -867,10 +873,12 @@ function update() {
         stars.forEach(s => s.y += diff * 0.1);
     }
     
-    // Vertical Fall Follow: Keep the frog from disappearing below the HUD immediately
-    if (frog.y > canvas.height * 0.8 && !frog.isJumping && frog.vy > 0) {
-        // If falling too low without jumping, speed up death or follow slightly
-        // For now, keep it simple: Ensure reset happens faster
+    // Smooth Camera Follow DOWN (Prevents losing the frog during falls)
+    if (frog.y > canvas.height * 0.65 && frog.vy > 0 && !frog.isJumping) {
+        const scrollAmt = 2; // Gently scroll down to keep frog in view while falling
+        frog.y -= scrollAmt;
+        platforms.forEach(p => p.y -= scrollAmt);
+        ripples.forEach(r => r.x -= scrollAmt);
     }
     frog.vx *= 0.985;
 
@@ -1419,7 +1427,7 @@ const resizeCanvas = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - headerHeight;
     // Always reposition frog properly on resize
-    if (platforms.length === 0 || frog.y > canvas.height) resetGame();
+    if (platforms.length === 0 || frog.y > canvas.height + 150) resetGame();
 };
 window.addEventListener('resize', resizeCanvas);
 
