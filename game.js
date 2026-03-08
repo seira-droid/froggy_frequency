@@ -620,11 +620,13 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
         return; 
     }
 
-    // If vowel is correct but pitch is off, allow jump but encourage precision
+    // If vowel is correct but pitch is off, block the jump and show feedback
     if (!isPitchCorrect && !easyMode) {
         const target = prompts[currentPromptIdx].target;
-        statusText.innerText = `✨ Good! Now try for ${target} Pitch!`;
-        statusText.style.color = "#44ff44";
+        statusText.innerText = `⭐ Great sound! But try a ${target} Pitch!`;
+        statusText.style.color = "#FFC107";
+        spawnParticles(frog.x + 30, frog.y + 30, '#FFC107');
+        return; 
     }
 
     // --- LINEAR PROPORTIONAL JUMP ENGINE ---
