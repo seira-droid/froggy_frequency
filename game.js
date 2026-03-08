@@ -234,7 +234,7 @@ let freqStabilityBuffer = []; // Tracking consistent phonation
 let sessionStats = { Small: 0, Medium: 0, Long: 0, Mega: 0 };
 let jumpCooldown = false;
 let needsSilence = false;
-let easyMode = true; // NEW: Make it fun by default!
+let easyMode = true; // Enabled to allow jumps based on vowel matching, ensuring movements even if pitch is slightly off
 
 // Hybrid Audio Logic (Mic + Serial)
 let audioCtx;
@@ -359,8 +359,10 @@ function detectPitch() {
             handleJump(freq);
             updateVisualizer(freq);
 
-            const breathPercent = Math.min(100, rms * 400);
-            breathBar.style.width = breathPercent + '%';
+            if (breathBar) {
+                const breathPercent = Math.min(100, rms * 400);
+                breathBar.style.width = breathPercent + '%';
+            }
 
             // Real-time Power Feedback for parents/therapists
             const settings = ageSettings[currentAge];
@@ -389,9 +391,11 @@ function detectPitch() {
             log.prepend(entry);
         }
         currentFreq = 0;
-        breathBar.style.width = '0%';
+        if (breathBar) breathBar.style.width = '0%';
         if (gameActive) {
-            statusText.innerText = 'Awaiting Voice...';
+            if (statusText.innerText === 'Voice Detected') {
+                 statusText.innerText = 'Awaiting Voice...';
+            }
             statusDot.classList.remove('pulse');
         }
         handleJump(0);
@@ -592,29 +596,26 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     const settings = ageSettings[currentAge];
     const isCorrect = easyMode ? isSoundCorrect : (isPitchCorrect && isSoundCorrect);
 
-    if (!isCorrect) {
-        // --- SPECIFIC ERROR FEEDBACK ---
-        if (!isSoundCorrect) {
-            statusText.innerText = "⭐ Try to match the vowel sound!";
-        } else if (!isPitchCorrect && !easyMode) {
-            const target = prompts[currentPromptIdx].target;
-            statusText.innerText = `⭐ Try to hit the ${target} Pitch!`;
-        }
+    // --- VOICING VALIDATION ---
+    // Strictly block sounds that don't match the target vowel (Ahhh vs Bee)
+    if (!isSoundCorrect) {
+        statusText.innerText = "⭐ Try to match the vowel sound!";
         statusText.style.color = "#FFC107";
         spawnParticles(frog.x + 30, frog.y + 30, '#FFC107');
-
+        
         if (sysLog) {
             const entry = document.createElement('div');
-            entry.innerText = `[FEEDBACK] Vowel: ${isSoundCorrect ? 'OK' : 'FAIL'} | Pitch: ${isPitchCorrect ? 'OK' : 'FAIL'} (${Math.round(freq)}Hz)`;
+            entry.innerText = `[FEEDBACK] Vowel FAIL | Pitch: ${isPitchCorrect ? 'OK' : 'FAIL'} (${Math.round(freq)}Hz)`;
             entry.style.color = '#FFC107';
             sysLog.prepend(entry);
         }
-        // REMOVED 'return;' here to ensure the frog still jumps based on frequency even if the vowel is slightly off.
+        return; 
     }
 
-    // --- EASY MODE ENCOURAGEMENT ---
-    if (easyMode && (!isPitchCorrect || !isSoundCorrect)) {
-        statusText.innerText = "✨ Good Effort! Keep Singing!";
+    // If vowel is correct but pitch is off, allow jump but encourage precision
+    if (!isPitchCorrect && !easyMode) {
+        const target = prompts[currentPromptIdx].target;
+        statusText.innerText = `✨ Good! Now try for ${target} Pitch!`;
         statusText.style.color = "#44ff44";
     }
 
@@ -647,19 +648,21 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     frog.jumpType = jumpType;
     playJumpSound();
 
-    // Trigger perfect match feedback
-    isPrompting = true;
-    if (promptTextEl) {
-        promptTextEl.innerText = "Perfect Match!";
-        promptTextEl.classList.add('active-prompt');
-    }
+    // Trigger perfect match feedback only if it's actually correct
+    if (isCorrect) {
+        isPrompting = true;
+        if (promptTextEl) {
+            promptTextEl.innerText = "Perfect Match!";
+            promptTextEl.classList.add('active-prompt');
+        }
 
-    setTimeout(() => {
-        if (promptTextEl) promptTextEl.classList.remove('active-prompt');
-        currentPromptIdx = (currentPromptIdx + 1) % prompts.length;
-        isPrompting = false;
-        updatePrompt();
-    }, 800); // Reduced from 1500ms for snappier feedback
+        setTimeout(() => {
+            if (promptTextEl) promptTextEl.classList.remove('active-prompt');
+            currentPromptIdx = (currentPromptIdx + 1) % prompts.length;
+            isPrompting = false;
+            updatePrompt();
+        }, 800);
+    }
 }
 
 function handleJetpack(freq) {
@@ -1239,9 +1242,7 @@ function updateVisualizer(freq) {
     vizCtx.lineWidth = 1;
     calibEl.innerText = 'Mic Active';
 
-    // Update Volume Meter
-    const percent = Math.min((freq / 1000) * 100, 100);
-    volumeMeter.style.width = percent + '%';
+    // Do not overwrite volume meter width here since detectPitch handles it with RMS
     if (freq > ageSettings[currentAge].low) {
         volumeMeter.style.background = '#FF5722'; // Flash red when jumping
     } else {
