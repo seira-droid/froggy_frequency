@@ -1454,6 +1454,9 @@ connectBtn.addEventListener('click', () => {
     initSerial().then(startGame);
 });
 startBtn.addEventListener('click', () => {
+    if (!gameActive) {
+        resetGame(); // Force a fresh start when button is clicked
+    }
     startGame();
     if (!audioCtx && !isSerialEnabled) initMic();
 });
@@ -1480,8 +1483,9 @@ const resizeCanvas = () => {
 };
 window.addEventListener('resize', resizeCanvas);
 
-resetGame(); // Ensure Initial Render
-resizeCanvas();
+// Initial Setup
+resizeCanvas(); // Set dimensions first
+resetGame();    // Then spawn elements based on those dimensions
 
 renderProfiles();
 animate();
