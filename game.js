@@ -627,8 +627,8 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
 
     // Calculate precise physics based on power
     // PHYSICS OVERHAUL: More dramatic difference between Small and Long jumps
-    frog.vy = -12 - (power * 16); // High jump range: 12 - 28
-    frog.vx = 6 + (power * 24);   // Distance range: 6 - 30
+    frog.vy = -14 - (power * 18); // Increased base jump height
+    frog.vx = 8 + (power * 32);   // Increased horizontal boost for easier gaps
 
     // Determine Jump Type
     let jumpType = "Small";
@@ -751,8 +751,7 @@ function updatePrompt() {
 let score = 0;
 let frog = { x: 100, y: 0, width: 60, height: 60, vy: 0, vx: 0, gravity: 0.6, isJumping: false };
 let platforms = [];
-const platformWidth = 130;
-const platformHeight = 20;
+const platformWidth = 180; // Widened platforms for easier landing
 
 // Game Visual Effects
 let ripples = [];
@@ -932,7 +931,7 @@ function update() {
         if (frog.vy >= 0 &&
             frog.x + frog.width * 0.8 > p.x &&
             frog.x + frog.width * 0.2 < p.x + p.width &&
-            prevFrogBottom <= p.y + 5 &&
+            prevFrogBottom <= p.y + 15 && // Increased tolerance for high-speed landing
             frogBottom >= p.y) {
 
             if (frog.isJumping) {
