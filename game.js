@@ -229,9 +229,8 @@ let fireflies = Array.from({ length: 30 }, () => ({
     phase: Math.random() * Math.PI * 2
 }));
 let frogTrail = [];
-let currentFreq = 0; // Global track for aura scaling
-let freqStabilityBuffer = []; // Tracking consistent phonation
-let sessionStats = { Small: 0, Medium: 0, Long: 0, Mega: 0 };
+let soundSustainFrames = 0; // Tracking how long the sound has been held
+const MIN_SUSTAIN_REQUIRED = 5; // Must hold the sound for at least ~80ms to trigger a jump
 let jumpCooldown = false;
 let needsSilence = false;
 let easyMode = false; // Set to false for strict pitch + vowel matching as requested. Frog only jumps for the correct sound.
@@ -514,33 +513,50 @@ function checkVowelMatch(promptText) {
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(dataArray);
 
-    let lowE = 0;  // 100-800Hz
-    let highE = 0; // 2000Hz+
+    let band1 = 0; // 200 - 800 Hz (Bass/Fundamental)
+    let band2 = 0; // 800 - 2200 Hz (Mids)
+    let band3 = 0; // 2200 - 5500 Hz (Highs/Sibilance)
+    
     const binSize = audioCtx ? audioCtx.sampleRate / analyser.fftSize : 22;
 
     for (let i = 0; i < dataArray.length; i++) {
         const f = i * binSize;
-        if (f > 100 && f < 1000) lowE += dataArray[i]; 
-        if (f >= 2200 && f < 6000) highE += dataArray[i]; 
+        if (f > 200 && f <= 800) band1 += dataArray[i];
+        if (f > 800 && f <= 2200) band2 += dataArray[i];
+        if (f > 2200 && f <= 5500) band3 += dataArray[i];
     }
+
+    const total = (band1 + band2 + band3) || 1;
+    const r1 = band1 / total;
+    const r2 = band2 / total;
+    const r3 = band3 / total;
 
     const text = promptText.toLowerCase();
-    const ratio = highE / (lowE || 1);
 
-    // STRICT VOWEL FINGERPRINTING
-    if (text.includes('bee') || text.includes('ee') || text.includes('lily') || text.includes('froggy')) {
-        return ratio > 0.6; // High frequency bias (Sibilance/Formants for EE)
-    }
-    if (text.includes('moo') || text.includes('oo') || text.includes('ah') || text.includes('deep')) {
-        return ratio < 0.15; // Low frequency bias (Bass/Depth for AH/OO)
-    }
-    if (text.includes('shout') || text.includes('mega')) {
-        return true; // Shouts are broad spectrum, skip vowel check
-    }
-    if (text.includes('jump')) {
-        return ratio > 0.2 && ratio < 0.45; // Mid-range vowel profile
-    }
+    // --- STRICT SPECTRAL SIGNATURES ---
     
+    // Pattern for "EE" or "High" sounds (e.g., Bee, Lily, EE)
+    // Signature: Sharp spike in mid/high frequencies (F2/F3)
+    if (text.includes('bee') || text.includes('ee') || text.includes('lily') || text.includes('high')) {
+        // Must have high energy in high bands and low energy in the lowest band
+        return r3 > 0.35 && r1 < 0.40;
+    }
+
+    // Pattern for "Ahhh" or "Deep" sounds
+    // Signature: Concentrated energy in the low-mids
+    if (text.includes('ah') || text.includes('deep')) {
+        return r1 > 0.65 && r3 < 0.12;
+    }
+
+    // Pattern for "OO" or "Middle" sounds (e.g., Moo, Words)
+    // Signature: Very heavy bass, very little high end
+    if (text.includes('moo') || text.includes('oo') || text.includes('froggy')) {
+        return r1 > 0.75 && r3 < 0.08;
+    }
+
+    // Default for shouts/words
+    if (text.includes('shout') || text.includes('mega')) return true;
+
     return true; 
 }
 
@@ -580,18 +596,25 @@ function handleJump(freq) {
     const targetRange = ranges[targetCat];
     if (!targetRange) return;
 
-    // --- RECOGNITION CHECK ---
-    const isCorrectPitch = freq >= targetRange[0] && (targetRange[1] === Infinity || freq < targetRange[1]);
+    // --- RECOGNITION CHECK (SUSTAIN + SPECTRAL) ---
     const isCorrectSound = checkVowelMatch(prompts[currentPromptIdx].text);
+    
+    // Filter out short words like "hello" by requiring sustain
+    if (isCorrectSound) {
+        soundSustainFrames++;
+    } else {
+        soundSustainFrames = 0;
+    }
 
-    // SMART MODE LOGIC: Must match the vowel (Ahhh vs Hello), 
-    // but pitch matches are automatic in Easy Mode to prevent frustration.
-    const canJump = easyMode ? isCorrectSound : (isCorrectPitch && isCorrectSound);
+    if (soundSustainFrames < MIN_SUSTAIN_REQUIRED) return;
+
+    const isCorrectPitch = freq >= targetRange[0] && (targetRange[1] === Infinity || freq < targetRange[1]);
 
     // COOLDOWN CHECK: Prevents rapid-fire jumping
     if (jumpCooldown) return;
 
-    executeJump(freq, isCorrectPitch, isCorrectSound);
+    executeJump(freq, isCorrectPitch, true); // true because we already verified sound above
+    soundSustainFrames = 0; // Reset after jump
     // Set a 400ms physical cooldown so they can't jump instantly again
     jumpCooldown = true;
     setTimeout(() => { jumpCooldown = false; }, 400);
