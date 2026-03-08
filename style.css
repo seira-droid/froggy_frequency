@@ -71,9 +71,9 @@ body {
 /* Child-Friendly HUD */
 .child-hud {
     display: flex;
-    gap: 30px;
+    gap: 15px;
     background: rgba(0, 0, 0, 0.4);
-    padding: 10px 25px;
+    padding: 5px 20px;
     border-radius: 50px;
     border: 2px solid rgba(255, 255, 255, 0.1);
 }
@@ -108,9 +108,9 @@ body {
     background: linear-gradient(135deg, #ff0080, #ff8c00);
     color: white;
     border: none;
-    padding: 15px 35px;
+    padding: 10px 25px;
     border-radius: 50px;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 900;
     cursor: pointer;
     box-shadow: 0 8px 0 #cc0066, 0 15px 25px rgba(255, 0, 128, 0.4);

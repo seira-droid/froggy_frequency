@@ -22,7 +22,7 @@ const breathBar = document.getElementById('breath-bar');
 const worldNameEl = document.getElementById('world-name');
 const levelValEl = document.getElementById('level-val');
 const sysLog = document.getElementById('diagnostic-log');
-console.log("Froggy Frequency Logic V10.1.5 Active");
+console.log("Froggy Frequency Logic V10.1.6 Active");
 
 // --- AI ADAPTIVE INTELLIGENCE ---
 class AdaptiveIntelligence {
@@ -827,7 +827,9 @@ function resetGame() {
     // Ensure canvas dimensions are captured
     const h = canvas.height || canvas.offsetHeight || 600;
 
-    platforms = [{ x: 50, y: h - 100, width: 200, visited: true }];
+    // SPATIAL FIX: Spawn higher up in the canvas to avoid being pushed off-screen by the header
+    const spawnY = Math.min(h * 0.4, 250); 
+    platforms = [{ x: 50, y: spawnY, width: 200, visited: true }];
     for (let i = 0; i < 5; i++) generatePlatform();
 
     frog.x = 100;
