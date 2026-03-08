@@ -520,20 +520,22 @@ function checkVowelMatch(promptText) {
 
     for (let i = 0; i < dataArray.length; i++) {
         const f = i * binSize;
-        if (f > 100 && f < 800) lowE += dataArray[i];
-        if (f > 2200) highE += dataArray[i];
+        if (f > 100 && f < 1000) lowE += dataArray[i]; // Broadened speech base
+        if (f > 2200 && f < 6000) highE += dataArray[i]; // Targeted formants
     }
 
     const text = promptText.toLowerCase();
-    // EE sounds have very high energy in second/third formants (high freq)
+    const ratio = highE / (lowE || 1);
+
+    // EE sounds (High Pitch/Vowel) have high ratio of energy in upper formants
     if (text.includes('ee') || text.includes('bee')) {
-        return highE > (lowE * 0.2); // Expect significant high-frequency resonance
+        return ratio > 0.45; // Stricter threshold for 'EE'
     }
-    // AH/OO sounds are more bass-heavy
+    // AH/OO sounds (Deep/Low) are concentrated in lower frequencies
     if (text.includes('ah') || text.includes('moo') || text.includes('oo')) {
-        return highE < (lowE * 0.15); // Expect capped high frequencies
+        return ratio < 0.20; // Stricter threshold for 'Deep' sounds
     }
-    return true; // Fallback for general words
+    return true;
 }
 
 function handleJump(freq) {
@@ -626,9 +628,9 @@ function executeJump(freq, isPitchCorrect, isSoundCorrect) {
     power = Math.max(0.05, Math.min(1.2, power)); // Allow "over-shouting" for extra kick
 
     // Calculate precise physics based on power
-    // PHYSICS OVERHAUL: More dramatic difference between Small and Long jumps
-    frog.vy = -14 - (power * 18); // Increased base jump height
-    frog.vx = 8 + (power * 32);   // Increased horizontal boost for easier gaps
+    // PHYSICS OVERHAUL: Balanced for visibility and platform spacing
+    frog.vy = -16 - (power * 14); // Jump height range: 16 to 30 (Slightly higher)
+    frog.vx = 7 + (power * 15);   // Toned down horizontal speed (Prevents flying off-screen)
 
     // Determine Jump Type
     let jumpType = "Small";
@@ -853,9 +855,9 @@ function update() {
 
 
     // Vertical Follow: Move world down if frog goes up past mid-screen
-    if (frog.y < canvas.height / 2.5) {
-        const diff = canvas.height / 2.5 - frog.y;
-        frog.y = canvas.height / 2.5;
+    if (frog.y < canvas.height / 3) {
+        const diff = canvas.height / 3 - frog.y;
+        frog.y = canvas.height / 3;
         platforms.forEach(p => p.y += diff);
         ripples.forEach(r => r.y += diff);
         particles.forEach(p => p.y += diff);
@@ -863,6 +865,12 @@ function update() {
         lanternGoal.y += diff;
         ambientLanterns.forEach(al => al.y += diff);
         stars.forEach(s => s.y += diff * 0.1);
+    }
+    
+    // Vertical Fall Follow: Keep the frog from disappearing below the HUD immediately
+    if (frog.y > canvas.height * 0.8 && !frog.isJumping && frog.vy > 0) {
+        // If falling too low without jumping, speed up death or follow slightly
+        // For now, keep it simple: Ensure reset happens faster
     }
     frog.vx *= 0.985;
 
@@ -998,7 +1006,7 @@ function update() {
         promptTextEl.innerText = `Welcome to ${worlds[currentWorldIdx].name}!`;
     }
 
-    if (frog.y > canvas.height + 500) resetGame();
+    if (frog.y > canvas.height + 200) resetGame(); // Reset faster if fallen into water
 
     // PERIODIC DIAGNOSTIC
     if (Date.now() % 1000 < 20 && sysLog) {
